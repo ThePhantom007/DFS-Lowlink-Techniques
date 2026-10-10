@@ -2,6 +2,25 @@ import { useEffect, useRef } from 'react';
 import { CODE } from '../engine/code.js';
 import { PALETTE } from './GraphCanvas.jsx';
 
+const KW = /^(?:int|void|for|if|else|while|return|continue|break|auto|const|bool|true|false|using|namespace|vector|pair|stack|struct)$/;
+function Syntax({ text }) {
+  const parts = [];
+  const re = /(\/\/.*$|#include.*$)|(\b\d+\b)|(\b[A-Za-z_]\w*\b)/g;
+  let last = 0;
+  let m;
+  while ((m = re.exec(text))) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    if (m[1]) parts.push(<span key={m.index} className="cm">{m[1]}</span>);
+    else if (m[2]) parts.push(<span key={m.index} className="num">{m[2]}</span>);
+    else if (KW.test(m[3])) parts.push(<span key={m.index} className="kw">{m[3]}</span>);
+    else if (text[re.lastIndex] === '(') parts.push(<span key={m.index} className="fnc">{m[3]}</span>);
+    else parts.push(m[3]);
+    last = re.lastIndex;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return <>{parts}</>;
+}
+
 export function CodePanel({ mode, line }) {
   const { lines } = CODE[mode];
   const ref = useRef(null);
@@ -18,7 +37,7 @@ export function CodePanel({ mode, line }) {
       {lines.map((ln, i) => (
         <div key={i} className={`cl ${i === line ? 'hl' : ''}`}>
           <span className="ln">{i + 1}</span>
-          <span className="src">{ln || ' '}</span>
+          <span className="src"><Syntax text={ln || ' '} /></span>
         </div>
       ))}
     </div>
@@ -110,7 +129,7 @@ function Result({ title, items, color }) {
 export function Legend({ mode }) {
   const items =
     mode === 'scc'
-      ? [['var(--accent)', 'tree'], ['var(--violet)', 'back', 1], ['var(--blue)', 'forward', 1], ['var(--orange)', 'cross', 1]]
+      ? [['var(--accent)', 'tree'], ['var(--violet)', 'back', 1], ['var(--pink)', 'forward', 1], ['var(--orange)', 'cross', 1]]
       : mode === 'bcc'
       ? [['var(--accent)', 'tree'], ['var(--violet)', 'back', 1], ['var(--amber)', 'on edge stack']]
       : mode === 'bridge'

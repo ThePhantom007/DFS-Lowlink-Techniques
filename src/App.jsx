@@ -3,6 +3,7 @@ import Visualizer from './components/Visualizer.jsx';
 import Learn from './components/Learn.jsx';
 import Practice from './components/Practice.jsx';
 import Compare from './components/Compare.jsx';
+import { IconSun, IconMoon } from './components/Icons.jsx';
 import { PRESETS_U, PRESETS_D, encodeShare, decodeShare } from './engine/graphs.js';
 import { load, save } from './store.js';
 
@@ -23,7 +24,7 @@ export default function App() {
     d: shared?.d || PRESETS_D[0].make(),
   }));
   const [start, setStart] = useState(shared?.start || 0);
-  const [theme, setTheme] = useState(() => load('dll-theme', 'dark'));
+  const [theme, setTheme] = useState(() => load('dll-theme', null) || (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
 
   const directed = mode === 'scc';
   const graph = directed ? graphs.d : graphs.u;
@@ -79,10 +80,21 @@ export default function App() {
         </div>
         <nav className="tabs" aria-label="Sections">
           {TABS.map(([id, l]) => (
-            <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)} aria-current={tab === id ? 'page' : undefined}>{l}</button>
+            <button key={id} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); window.scrollTo({ top: 0 }); }} aria-current={tab === id ? 'page' : undefined}>{l}</button>
           ))}
         </nav>
-        <button className="ghost" onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))} aria-label="Toggle light and dark theme">{theme === 'dark' ? 'Light' : 'Dark'} theme</button>
+        <button
+          className="themeswitch"
+          role="switch"
+          aria-checked={theme === 'dark'}
+          aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+        >
+          <span className={`ti ${theme === 'light' ? 'act' : ''}`}><IconSun /></span>
+          <span className={`ti ${theme === 'dark' ? 'act' : ''}`}><IconMoon /></span>
+          <span className="knob" aria-hidden="true" />
+        </button>
       </header>
 
       <main>

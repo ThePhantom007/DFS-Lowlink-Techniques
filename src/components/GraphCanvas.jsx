@@ -1,14 +1,14 @@
 import { useRef, useState, useMemo } from 'react';
 import { W, H, MAX_N } from '../engine/graphs.js';
 
-export const PALETTE = ['#2dd4bf', '#f5a524', '#a78bfa', '#60a5fa', '#fb7185', '#4ade80', '#f472b6', '#facc15', '#22d3ee', '#c084fc', '#fb923c', '#34d399'];
+export const PALETTE = ['#4f83ff', '#f59e0b', '#a78bfa', '#22d3ee', '#fb7185', '#818cf8', '#f472b6', '#facc15', '#38bdf8', '#c084fc', '#fb923c', '#34d399'];
 const R = 20;
 
 const MARKERS = {
   gray: 'var(--edge)',
   tree: 'var(--accent)',
   back: 'var(--violet)',
-  forward: 'var(--blue)',
+  forward: 'var(--pink)',
   cross: 'var(--orange)',
   hl: 'var(--amber)',
 };
@@ -16,7 +16,7 @@ const MARKERS = {
 const KIND_STYLE = {
   tree: { stroke: 'var(--accent)', width: 3.5, dash: null, marker: 'tree' },
   back: { stroke: 'var(--violet)', width: 3, dash: '7 5', marker: 'back' },
-  forward: { stroke: 'var(--blue)', width: 3, dash: '2 5', marker: 'forward' },
+  forward: { stroke: 'var(--pink)', width: 3, dash: '2 5', marker: 'forward' },
   cross: { stroke: 'var(--orange)', width: 3, dash: '7 5', marker: 'cross' },
   bridge: { stroke: 'var(--red)', width: 5.5, dash: null, marker: 'gray' },
 };
@@ -196,7 +196,7 @@ export default function GraphCanvas({
         const isCur = step && step.cur === v;
         const isAP = step && mode !== 'scc' && step.aps.includes(v);
         const fill = o.fill || vertexFill(v);
-        const dark = fill === 'var(--amber)' || fill === 'var(--accent)' || fill.startsWith('#');
+        const labelFill = fill === 'var(--node)' ? 'var(--text)' : fill === 'var(--accent)' ? 'var(--on-accent)' : '#101828';
         return (
           <g
             key={v}
@@ -215,8 +215,9 @@ export default function GraphCanvas({
             {isAP && <circle r={R + 7} fill="none" stroke="var(--red)" strokeWidth="3" strokeDasharray="4 4" />}
             {pending === v && <circle r={R + 7} fill="none" stroke="var(--blue)" strokeWidth="3" />}
             {o.ring && <circle r={R + 7} fill="none" stroke={o.ring} strokeWidth="4" />}
-            <circle r={R} fill={fill} stroke={isCur ? 'var(--text)' : 'rgba(0,0,0,0.25)'} strokeWidth={isCur ? 3.5 : 1.5} style={{ transition: 'fill 0.25s' }} />
-            <text textAnchor="middle" dy="0.35em" fontSize="15" fontWeight="700" fill={dark ? '#0b1418' : '#fff'} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+            {isCur && <circle className="pulse" r={R + 5} fill="none" stroke="var(--accent-2)" strokeWidth="2.5" />}
+            <circle className="node-c" r={R} fill={fill} stroke={isCur ? 'var(--text)' : 'var(--node-stroke)'} strokeWidth={isCur ? 3.5 : 1.5} style={{ transition: 'fill 0.25s' }} />
+            <text textAnchor="middle" dy="0.35em" fontSize="15" fontWeight="700" fill={labelFill} style={{ pointerEvents: 'none', userSelect: 'none' }}>
               {v}
             </text>
             {step && labelMode !== 'none' && step.disc[v] >= 0 && (

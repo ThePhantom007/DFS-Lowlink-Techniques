@@ -13,7 +13,7 @@ It runs entirely in the browser (React + Vite, hand-written SVG, no backend), so
 ## Quick start
 
 ```bash
-npm install
+npm install        # needs Node 20.19+ or 22.12+ (Vite 8)
 npm run dev        # http://localhost:5173
 npm run build      # production build in dist/
 npm test           # engine tests vs. brute force
@@ -41,6 +41,7 @@ Settings if asked: Framework = Vite, Build = `npm run build`, Output = `dist`.
 - **What-if tool**: delete vertices or edges and see the remaining components, to verify a cut vertex or bridge by brute force.
 - Graph editor: drag, add and delete vertices and edges, paste an edge list, choose the DFS start vertex, random graphs, 13 curated presets (root case, parallel edges, disconnected graph, cross-edge trap, ...), shareable links.
 - Block-cut tree that grows as blocks are popped.
+- Light and dark themes (sun/moon switch, follows your system setting by default) with a blue colour scheme and theme-aware highlights.
 
 **Learn**: ten short lessons with formulas, proof sketches, common traps and "Try it" buttons that jump to the right preset. Progress is saved in the browser.
 

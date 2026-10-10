@@ -23,8 +23,8 @@ function Block({ b, onTry }) {
     case 'list': return <ul>{b.items.map((x, i) => <li key={i}><Rich text={x} /></li>)}</ul>;
     case 'formula': return <pre className="formula">{b.text}</pre>;
     case 'code': return <pre className="codeblock">{b.text}</pre>;
-    case 'tip': return <div className="callout tip"><b>Tip</b><Rich text={b.text} /></div>;
-    case 'warn': return <div className="callout warn"><b>Watch out</b><Rich text={b.text} /></div>;
+    case 'tip': return <div className="callout tip"><b>Tip</b><div><Rich text={b.text} /></div></div>;
+    case 'warn': return <div className="callout warn"><b>Watch out</b><div><Rich text={b.text} /></div></div>;
     case 'try': return <button className="try" onClick={() => onTry(b.mode, b.preset)}>▶ {b.label}</button>;
     default: return null;
   }

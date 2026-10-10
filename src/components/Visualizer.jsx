@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import GraphCanvas, { PALETTE } from './GraphCanvas.jsx';
 import BlockCutTree from './BlockCutTree.jsx';
+import { IconPlay, IconPause, IconStart, IconEnd, IconBack, IconNext } from './Icons.jsx';
 import { CodePanel, StatePanel, Legend } from './Panels.jsx';
 import { runTrace, blockCutTree } from '../engine/traces.js';
 import { PRESETS_U, PRESETS_D, randomUndirected, randomDirected, parseEdgeList, edgeListText, componentsAfterRemoval, MAX_N } from '../engine/graphs.js';
@@ -20,7 +21,14 @@ const TOOLS = [
   ['whatif', 'What-if'],
 ];
 
-const typing = (e) => ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
+// Keyboard shortcuts must not hijack typing, slider/select arrows, or Space on a focused button or checkbox.
+const typing = (e) => {
+  const t = e.target;
+  if (t.tagName === 'TEXTAREA' || t.tagName === 'SELECT') return true;
+  if (t.tagName === 'INPUT') return !(t.type === 'checkbox' && e.key !== ' ');
+  if (t.tagName === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return true;
+  return false;
+};
 
 export default function Visualizer({ mode, setMode, graph, setGraph, start, setStart, onShare }) {
   const directed = mode === 'scc';
@@ -222,11 +230,11 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
 
         <div className="card player">
           <div className="pbtns">
-            <button onClick={() => setIdx(0)} aria-label="Restart" title="Restart (Home)">⏮</button>
-            <button onClick={prev} disabled={idx === 0} aria-label="Previous step" title="Previous (←)">◀</button>
-            <button className="primary" onClick={() => setPlaying((p) => !p)} aria-label={playing ? 'Pause' : 'Play'} title="Play / pause (Space)">{playing ? '⏸ Pause' : '▶ Play'}</button>
-            <button onClick={next} disabled={!canNext} aria-label="Next step" title="Next (→)">▶|</button>
-            <button onClick={() => setIdx(last)} aria-label="Jump to the end" title="End">⏭</button>
+            <button className="icon" onClick={() => setIdx(0)} aria-label="Restart" title="Restart (Home)"><IconStart /></button>
+            <button className="icon" onClick={prev} disabled={idx === 0} aria-label="Previous step" title="Previous (←)"><IconBack /></button>
+            <button className="primary withicon" onClick={() => setPlaying((p) => !p)} aria-label={playing ? 'Pause' : 'Play'} title="Play / pause (Space)">{playing ? <><IconPause /> Pause</> : <><IconPlay /> Play</>}</button>
+            <button className="icon" onClick={next} disabled={!canNext} aria-label="Next step" title="Next (→)"><IconNext /></button>
+            <button className="icon" onClick={() => setIdx(last)} aria-label="Jump to the end" title="End"><IconEnd /></button>
             <label className="inl">speed
               <select value={speed} onChange={(e) => setSpeed(+e.target.value)}>
                 <option value={0.5}>0.5×</option>
