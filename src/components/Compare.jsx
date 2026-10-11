@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import GraphCanvas, { PALETTE } from './GraphCanvas.jsx';
 import BlockCutTree from './BlockCutTree.jsx';
 import { runTrace, blockCutTree } from '../engine/traces.js';
-import { PRESETS_U, PRESETS_D, randomUndirected, randomDirected } from '../engine/graphs.js';
+import { PRESETS_U, PRESETS_D, matchPreset, randomUndirected, randomDirected } from '../engine/graphs.js';
 
 const TABLE = [
   ['Articulation points', 'Which vertices disconnect the graph?', 'non-root: low[v] ≥ disc[u]; root: ≥ 2 children', 'none', 'set of vertices'],
@@ -25,17 +25,14 @@ function Pane({ title, children, caption }) {
 export default function Compare({ mode, graph, setMode, setGraph }) {
   const directed = mode === 'scc';
   const presets = directed ? PRESETS_D : PRESETS_U;
-  const [picked, setPicked] = useState(null); // { id, graph } of the preset loaded here, so its description can be shown
+  const presetId = matchPreset(graph, directed);
   const load = (id) => {
     const p = presets.find((x) => x.id === id);
     if (!p) return;
-    const g = p.make();
-    setGraph(g);
-    setPicked({ id, graph: g });
+    setGraph(p.make());
   };
   const randomize = () => {
     setGraph(directed ? randomDirected(7, 9 + Math.floor(Math.random() * 4)) : randomUndirected(7 + Math.floor(Math.random() * 3), 1 + Math.floor(Math.random() * 3)));
-    setPicked(null);
   };
   const res = useMemo(() => {
     if (graph.n === 0) return null;
@@ -60,13 +57,15 @@ export default function Compare({ mode, graph, setMode, setGraph }) {
         <div className="pbtns">
           <button className={!directed ? 'primary' : ''} onClick={() => !directed || setMode('ap')}>Undirected graph</button>
           <button className={directed ? 'primary' : ''} onClick={() => directed || setMode('scc')}>Directed graph</button>
-          <select aria-label="Preset graphs for comparison" value={picked && picked.graph === graph ? picked.id : ''} onChange={(e) => load(e.target.value)}>
-            <option value="">Preset graphs…</option>
-            {presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
+          <label className="inl">Preset graphs
+            <select aria-label="Preset graphs for comparison" value={presetId} onChange={(e) => load(e.target.value)}>
+              <option value="" disabled hidden>Custom graph</option>
+              {presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </label>
           <button onClick={randomize}>Random</button>
         </div>
-        {picked && picked.graph === graph && <p className="presetdesc">{presets.find((p) => p.id === picked.id)?.desc}</p>}
+        {presetId && <p className="presetdesc">{presets.find((p) => p.id === presetId)?.desc}</p>}
       </div>
 
       {res && !directed && (

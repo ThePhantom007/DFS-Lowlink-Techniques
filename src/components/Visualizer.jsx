@@ -4,7 +4,7 @@ import BlockCutTree from './BlockCutTree.jsx';
 import { IconPlay, IconPause, IconStart, IconEnd, IconBack, IconNext } from './Icons.jsx';
 import { CodePanel, StatePanel, Legend } from './Panels.jsx';
 import { runTrace, blockCutTree } from '../engine/traces.js';
-import { PRESETS_U, PRESETS_D, randomUndirected, randomDirected, parseEdgeList, edgeListText, componentsAfterRemoval, MAX_N } from '../engine/graphs.js';
+import { PRESETS_U, PRESETS_D, matchPreset, randomUndirected, randomDirected, parseEdgeList, edgeListText, componentsAfterRemoval, MAX_N } from '../engine/graphs.js';
 
 export const MODES = [
   { id: 'ap', label: 'Articulation points', rule: 'low[v] ≥ disc[u]   (root: ≥ 2 children)', blurb: 'A vertex whose removal disconnects the graph.' },
@@ -30,7 +30,7 @@ const HELP = {
   del: ['Delete', 'Click a vertex to remove it together with its edges, or click an edge to remove only that edge. The remaining vertices are renumbered.'],
   whatif: ['What-if', 'Click vertices or edges to remove them temporarily and see how many separate pieces the graph breaks into. Click again to restore. A cut vertex or bridge always increases the count.'],
   preset: ['Preset graphs', 'Load a ready-made example that shows one behaviour clearly, such as the root rule, parallel edges or a disconnected graph.'],
-  start: ['Start vertex', 'Choose where the DFS begins. It changes the DFS tree and which vertex counts as the root.'],
+  start: ['Starting node', 'Choose the vertex where the DFS begins. It changes the DFS tree and which vertex counts as the root.'],
   random: ['Random', 'Generate a new random graph to experiment with.'],
   edgelist: ['Edge list', 'Show the graph as text, one edge per line like 0-1. Edit it or paste your own, then press Apply.'],
   share: ['Share', 'Copy a link that opens this exact graph and technique.'],
@@ -58,7 +58,6 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
   const [answers, setAnswers] = useState({});
   const [remV, setRemV] = useState(new Set());
   const [remE, setRemE] = useState(new Set());
-  const [presetId, setPresetId] = useState(null);
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
   const [textErr, setTextErr] = useState('');
@@ -69,6 +68,7 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
   const bctRef = useRef(null);
   const hv = (k) => ({ onMouseEnter: () => setHint(k), onMouseLeave: () => setHint(null), onFocus: () => setHint(k), onBlur: () => setHint(null) });
 
+  const presetId = useMemo(() => matchPreset(graph, directed), [graph.n, graph.edges, directed]); // eslint-disable-line
   const steps = useMemo(() => runTrace(mode, graph, start), [mode, graph.n, graph.edges, start]); // eslint-disable-line
   useEffect(() => {
     setIdx(0);
@@ -176,7 +176,6 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
 
   const changeGraph = (g) => {
     setGraph(g);
-    setPresetId(null);
     setPendingV(null);
   };
 
@@ -185,14 +184,12 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
     if (!p) return;
     setGraph(p.make());
     setStart(0);
-    setPresetId(id);
     setEditing(false);
   };
 
   const randomize = () => {
     setGraph(directed ? randomDirected(7, 9 + Math.floor(Math.random() * 4)) : randomUndirected(7 + Math.floor(Math.random() * 3), 1 + Math.floor(Math.random() * 3)));
     setStart(0);
-    setPresetId(null);
   };
 
   const openEditor = () => {
@@ -205,7 +202,6 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
     if (!g) return setTextErr(`No edges found. Write one per line, like 0-1 (vertices 0 to ${MAX_N - 1}).`);
     setGraph(g);
     setStart(0);
-    setPresetId(null);
     setTextErr('');
   };
 
@@ -261,10 +257,12 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
         <section className="vleft card">
           <div className="toolbar">
             <button onClick={() => setTool('addv')}>Add Vertex</button>
-            <select value="" onChange={(e) => loadPreset(e.target.value)}>
-              <option value="">Load a preset…</option>
-              {presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            <label className="inl">Preset graphs
+              <select aria-label="Preset graphs" value="" onChange={(e) => loadPreset(e.target.value)}>
+                <option value="" disabled hidden>Choose one</option>
+                {presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </label>
           </div>
           <GraphCanvas graph={graph} directed={directed} tool={tool} onChange={changeGraph} />
         </section>
@@ -288,11 +286,13 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
                 <button key={t} className={tool === t ? 'on' : ''} onClick={() => { setTool(t); setPendingV(null); }} {...hv(t)}>{l}</button>
               ))}
             </div>
-            <select aria-label="Preset graphs" value={presetId || ''} onChange={(e) => loadPreset(e.target.value)} {...hv('preset')}>
-              <option value="">Preset graphs…</option>
-              {presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-            <label className="inl" {...hv('start')}>start
+            <label className="inl" {...hv('preset')}>Preset graphs
+              <select aria-label="Preset graphs" value={presetId} onChange={(e) => loadPreset(e.target.value)}>
+                <option value="" disabled hidden>Custom graph</option>
+                {presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </label>
+            <label className="inl" {...hv('start')}>Starting node
               <select value={start} onChange={(e) => setStart(+e.target.value)}>
                 {graph.pos.map((_, v) => <option key={v} value={v}>{v}</option>)}
               </select>

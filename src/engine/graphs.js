@@ -81,7 +81,7 @@ export const PRESETS_U = [
   {
     id: 'hub',
     name: 'Hub & spokes (root case)',
-    desc: 'Vertex 0 has many DFS children when started there — try start = 0, then start = 1 to see the root rule appear and vanish.',
+    desc: 'Vertex 0 has many DFS children when the DFS starts there. Try starting node 0, then starting node 1, to see the root rule appear and vanish.',
     make: () => mk(6, [[0, 1], [0, 2], [0, 3], [0, 4], [4, 5], [5, 0]], [[380, 240], [380, 70], [610, 150], [150, 150], [560, 390], [250, 390]]),
   },
   {
@@ -142,6 +142,15 @@ export const PRESETS_D = [
     make: () => mk(5, [[0, 1], [0, 2], [1, 3], [2, 3], [3, 4]], [[100, 240], [270, 120], [270, 360], [450, 240], [630, 240]]),
   },
 ];
+
+/* Which preset does this graph currently match? (Structure only: moving vertices keeps the match.) */
+const sigOf = (g) => JSON.stringify([g.n, g.edges]);
+const SIGS = { u: PRESETS_U.map((p) => [p.id, sigOf(p.make())]), d: PRESETS_D.map((p) => [p.id, sigOf(p.make())]) };
+export function matchPreset(g, directed) {
+  const s = sigOf(g);
+  const hit = (directed ? SIGS.d : SIGS.u).find(([, x]) => x === s);
+  return hit ? hit[0] : '';
+}
 
 /* ---------- random graphs ---------- */
 function rng(seed) {

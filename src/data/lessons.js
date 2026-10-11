@@ -67,7 +67,7 @@ export const LESSONS = [
       { t: 'p', text: 'If v\'s subtree cannot climb **strictly above** u, then every path from that subtree to the rest of the graph passes through u. Remove u and the subtree is stranded.' },
       { t: 'h', text: 'The root is special' },
       { t: 'p', text: 'The root has nothing above it, so the test above would always say "yes". Instead: **the root is an articulation point iff it has two or more DFS children.** Different child subtrees are never joined by an edge (no cross edges), so only the root connects them.' },
-      { t: 'warn', text: 'The classic bug: forgetting the root rule, or applying the non-root test to the root. Run the "Hub & spokes" preset with start = 0 and then start = 1 to see the root rule appear and disappear.' },
+      { t: 'warn', text: 'The classic bug: forgetting the root rule, or applying the non-root test to the root. Run the "Hub & spokes" preset with starting node 0 and then starting node 1 to see the root rule appear and disappear.' },
       { t: 'tip', text: 'Use the **What-if** tool in the visualiser: click a flagged vertex and watch the graph actually split. Verifying with brute force is the best way to trust the rule.' },
       { t: 'try', label: 'Hub & spokes: the root rule in action', mode: 'ap', preset: 'hub' },
       { t: 'try', label: 'Campus network: find the weak routers', mode: 'ap', preset: 'campus' },

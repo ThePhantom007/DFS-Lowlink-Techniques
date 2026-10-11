@@ -227,7 +227,7 @@ export function traceUndirected(mode, g, start = 0) {
     });
   }
 
-  snap('main', 'Initial state: every disc[] and low[] is -1 (unvisited). Pick a start vertex and run the DFS.');
+  snap('main', 'Initial state: every disc[] and low[] is -1 (unvisited). Pick a starting node and run the DFS.');
   let first = true;
   for (const r of rootsOrder(n, start)) {
     if (st.disc[r] !== -1) continue;

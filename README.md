@@ -39,7 +39,7 @@ Settings if asked: Framework = Vite, Build = `npm run build`, Output = `dist`.
 - Narration for every step explaining *why* it happens, including the exact inequality being tested.
 - **Predict mode**: playback pauses at each decision (new `low` value, "is it a cut vertex?", "is it a bridge?", "pop a block?", "is it on the Tarjan stack?") and asks you to answer before revealing the result, with a running score.
 - **What-if tool**: delete vertices or edges and see the remaining components, to verify a cut vertex or bridge by brute force.
-- Graph editor: drag, add and delete vertices and edges, paste an edge list, choose the DFS start vertex, random graphs, 13 curated presets (root case, parallel edges, disconnected graph, cross-edge trap, ...), shareable links.
+- Graph editor: drag, add and delete vertices and edges, paste an edge list, choose the DFS starting node, random graphs, 13 curated presets (root case, parallel edges, disconnected graph, cross-edge trap, ...), shareable links.
 - Block-cut tree that grows as blocks are popped. When the biconnected-components run finishes, the page scrolls to it and the card glows so it isn't missed.
 - Dotted outlines drawn around every block (biconnected components) and every strongly connected component as they are found.
 - A one-line description of every toolbar control appears directly under the toolbar (the active tool, or whatever you hover).

@@ -35,7 +35,7 @@ export default function App() {
     save('dll-theme', theme);
   }, [theme]);
 
-  // switching between the directed and undirected worlds: keep the start vertex valid
+  // switching between the directed and undirected worlds: keep the starting node valid
   useEffect(() => {
     if (start >= graph.n) setStart(0);
   }, [graph.n, start]);
@@ -127,7 +127,7 @@ function About() {
             <li><b>Step through</b> each algorithm with live <code>disc / low</code> labels, the DFS call stack, the edge or vertex stack, and highlighted C++.</li>
             <li><b>Predict mode</b>: the player pauses at every decision and asks you what happens next.</li>
             <li><b>What-if</b>: delete a vertex or edge and see the graph split, to verify a result by brute force.</li>
-            <li><b>Edit anything</b>: drag, add and delete vertices and edges, paste an edge list, pick a start vertex, or load 13 curated presets.</li>
+            <li><b>Edit anything</b>: drag, add and delete vertices and edges, paste an edge list, pick the starting node, or load 13 curated presets.</li>
             <li><b>Block-cut tree</b> that grows live as blocks pop.</li>
             <li><b>Learn</b>: ten short lessons with proofs, traps and "try it" buttons.</li>
             <li><b>Practice</b>: a quiz, Trace-it (compute low by hand) and Spot-it (find cut vertices and bridges).</li>
