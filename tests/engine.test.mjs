@@ -66,6 +66,7 @@ for (const g of undirectedGraphs.slice(0, 40)) {
       check(typeof s.msg === 'string' && s.msg.length > 0, `empty msg step ${i}`);
       check(s.line >= 0, `no code line for ${mode} step ${i}: ${s.msg}`);
       if (s.quiz) check(s.quiz.answer >= 0 && s.quiz.options.length >= 2, `bad quiz ${mode} step ${i}`);
+      check(Array.isArray(s.trail) && s.trail.length >= 1 && s.trail[s.trail.length - 1] === s.line && s.trail.every((l) => l >= 0), `bad trail ${mode} step ${i}`);
     });
   }
 }
@@ -73,6 +74,7 @@ for (const g of directedGraphs.slice(0, 30)) {
   traceSCC(g, 0).forEach((s, i) => {
     check(s.line >= 0, `no code line scc step ${i}: ${s.msg}`);
     if (s.quiz) check(s.quiz.answer >= 0, `bad quiz scc step ${i}`);
+    check(Array.isArray(s.trail) && s.trail.length >= 1 && s.trail[s.trail.length - 1] === s.line, `bad trail scc step ${i}`);
   });
 }
 

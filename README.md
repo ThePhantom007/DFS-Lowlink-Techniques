@@ -35,7 +35,7 @@ Settings if asked: Framework = Vite, Build = `npm run build`, Output = `dist`.
 - Step-by-step playback (play/pause, step back and forward, scrubber, 0.5×–4× speed, keyboard shortcuts).
 - Live `disc / low` labels on every vertex, vertex states (unvisited / on path / finished), edge classification (tree, back, forward, cross), cut-vertex rings, bridge highlighting, colour-coded blocks and SCCs.
 - The DFS call stack, the **edge stack** (BCC) or **vertex stack** (Tarjan) shown live, plus the edge-stack underlay drawn on the graph.
-- C++ source with the currently executing line highlighted and auto-scrolled.
+- C++ source where the highlight walks line by line through what actually executes (loop header, parent check, branch, update). When you jump several steps at once, it replays through all of them quickly and shows a "Replaying N steps" badge.
 - Narration for every step explaining *why* it happens, including the exact inequality being tested.
 - **Predict mode**: playback pauses at each decision (new `low` value, "is it a cut vertex?", "is it a bridge?", "pop a block?", "is it on the Tarjan stack?") and asks you to answer before revealing the result, with a running score.
 - **What-if tool**: delete vertices or edges and see the remaining components, to verify a cut vertex or bridge by brute force.

@@ -5,37 +5,42 @@ import { PALETTE } from './GraphCanvas.jsx';
 const KW = /^(?:int|void|for|if|else|while|return|continue|break|auto|const|bool|true|false|using|namespace|vector|pair|stack|struct)$/;
 function Syntax({ text }) {
   const parts = [];
-  const re = /(\/\/.*$|#include.*$)|(\b\d+\b)|(\b[A-Za-z_]\w*\b)/g;
+  const re = /(\/\/.*$)|(#include.*$)|(\b\d+\b)|(\b[A-Za-z_]\w*\b)/g;
   let last = 0;
   let m;
   while ((m = re.exec(text))) {
     if (m.index > last) parts.push(text.slice(last, m.index));
     if (m[1]) parts.push(<span key={m.index} className="cm">{m[1]}</span>);
-    else if (m[2]) parts.push(<span key={m.index} className="num">{m[2]}</span>);
-    else if (KW.test(m[3])) parts.push(<span key={m.index} className="kw">{m[3]}</span>);
-    else if (text[re.lastIndex] === '(') parts.push(<span key={m.index} className="fnc">{m[3]}</span>);
-    else parts.push(m[3]);
+    else if (m[2]) parts.push(<span key={m.index} className="pp">{m[2]}</span>);
+    else if (m[3]) parts.push(<span key={m.index} className="num">{m[3]}</span>);
+    else if (KW.test(m[4])) parts.push(<span key={m.index} className="kw">{m[4]}</span>);
+    else if (text[re.lastIndex] === '(') parts.push(<span key={m.index} className="fnc">{m[4]}</span>);
+    else parts.push(m[4]);
     last = re.lastIndex;
   }
   if (last < text.length) parts.push(text.slice(last));
   return <>{parts}</>;
 }
 
-export function CodePanel({ mode, line }) {
+export function CodePanel({ mode, line, prev = -1, fast = false }) {
   const { lines } = CODE[mode];
   const ref = useRef(null);
   useEffect(() => {
-    const el = ref.current?.querySelector('.hl');
-    if (el && ref.current) {
-      const box = ref.current;
-      const top = el.offsetTop - box.clientHeight / 2 + el.clientHeight / 2;
-      box.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    const box = ref.current;
+    const el = box?.querySelector('.hl');
+    if (!el) return;
+    // only scroll when the running line leaves the visible band, so the view stays calm
+    const margin = 44;
+    const top = el.offsetTop;
+    const bottom = top + el.clientHeight;
+    if (top < box.scrollTop + margin || bottom > box.scrollTop + box.clientHeight - margin) {
+      box.scrollTo({ top: Math.max(0, top - box.clientHeight / 2), behavior: fast ? 'auto' : 'smooth' });
     }
-  }, [line, mode]);
+  }, [line, mode, fast]);
   return (
     <div className="code" ref={ref} tabIndex={0} aria-label="C++ source, current line highlighted">
       {lines.map((ln, i) => (
-        <div key={i} className={`cl ${i === line ? 'hl' : ''}`}>
+        <div key={i} className={`cl ${i === line ? 'hl' : i === prev ? 'was' : ''}`}>
           <span className="ln">{i + 1}</span>
           <span className="src"><Syntax text={ln || ' '} /></span>
         </div>

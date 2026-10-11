@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import GraphCanvas, { PALETTE } from './GraphCanvas.jsx';
 import BlockCutTree from './BlockCutTree.jsx';
 import { IconPlay, IconPause, IconStart, IconEnd, IconBack, IconNext } from './Icons.jsx';
@@ -91,6 +91,65 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   });
+
+  /* ---------- code-line runner ----------
+     The highlighted C++ line walks through every line a step executes (loop header, parent check,
+     branch, ...). When several steps are skipped at once (scrubber, Home/End, jumps) it replays
+     through all of them quickly, so the viewer sees that the program ran in between. */
+  const [shown, setShown] = useState(0);
+  const [prevShown, setPrevShown] = useState(-1);
+  const [replaying, setReplaying] = useState(0);
+  const shownRef = useRef(0);
+  const prevIdxRef = useRef(0);
+  const stepsRef = useRef(steps);
+  const timersRef = useRef([]);
+
+  useEffect(() => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+    const cur = steps[Math.min(idx, Math.max(last, 0))];
+    if (!cur) return undefined;
+    const from = prevIdxRef.current;
+    const sameTrace = stepsRef.current === steps;
+    prevIdxRef.current = idx;
+    stepsRef.current = steps;
+    const land = (ln) => { setPrevShown(shownRef.current); shownRef.current = ln; setShown(ln); };
+
+    const delta = idx - from;
+    if (!sameTrace || delta < 1) {          // new trace, restart, or stepping backwards: jump straight there
+      shownRef.current = cur.line;
+      setShown(cur.line);
+      setPrevShown(-1);
+      setReplaying(0);
+      return undefined;
+    }
+
+    let queue = [];
+    let unit;
+    if (delta === 1) {
+      queue = cur.trail;
+      unit = playing ? Math.min(150, Math.max(40, (1300 / speed) * 0.7 / queue.length)) : 130;
+      setReplaying(0);
+    } else {
+      for (let k = from + 1; k <= idx; k++) queue.push(...steps[k].trail);
+      queue = queue.filter((x, i) => i === 0 || x !== queue[i - 1]);
+      const CAP = 70;
+      if (queue.length > CAP) {
+        const sampled = [];
+        for (let i = 0; i < CAP; i++) sampled.push(queue[Math.floor((i * (queue.length - 1)) / (CAP - 1))]);
+        queue = sampled;
+      }
+      unit = queue.length > 40 ? 28 : 55;
+      setReplaying(delta);
+    }
+    queue.forEach((ln, i) => {
+      timersRef.current.push(setTimeout(() => {
+        land(ln);
+        if (i === queue.length - 1) timersRef.current.push(setTimeout(() => setReplaying(0), 500));
+      }, i * unit));
+    });
+    return () => { timersRef.current.forEach(clearTimeout); };
+  }, [idx, steps]); // eslint-disable-line
 
   const answered = Object.entries(answers).filter(([, v]) => v >= 0);
   const correct = answered.filter(([i, v]) => steps[i]?.quiz?.answer === v).length;
@@ -284,17 +343,15 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
 
       <aside className="vright">
         <div className="card">
-          <div className="cardh">{info.label}</div>
-          <p className="blurb">{info.blurb}</p>
-          <code className="rule">{info.rule}</code>
-        </div>
-        <div className="card">
-          <div className="cardh">C++ — highlighted line is the one running</div>
-          <CodePanel mode={mode} line={step.line} />
-        </div>
-        <div className="card">
           <div className="cardh">Live state</div>
           <StatePanel mode={mode} step={step} graph={graph} />
+        </div>
+        <div className="card">
+          <div className="cardh">
+            C++ — highlighted line is the one running
+            {replaying > 0 && <span className="ffwd">Replaying {replaying} steps</span>}
+          </div>
+          <CodePanel mode={mode} line={shown} prev={prevShown} fast={replaying > 0} />
         </div>
         {bct && (
           <div className="card">
@@ -303,6 +360,11 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
             <p className="muted small">Rectangles are blocks, dashed circles are cut vertices. Blocks only touch through cut vertices, so the result is always a tree (or forest).</p>
           </div>
         )}
+        <div className="card">
+          <div className="cardh">{info.label}</div>
+          <p className="blurb">{info.blurb}</p>
+          <code className="rule">{info.rule}</code>
+        </div>
       </aside>
     </div>
   );

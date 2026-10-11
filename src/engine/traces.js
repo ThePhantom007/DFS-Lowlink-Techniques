@@ -37,8 +37,13 @@ function makeRecorder(n, m, mode) {
   };
   const steps = [];
   const L = CODE[mode].marks;
+  // `pre` lists the marks of lines that execute just before `key`, so the code highlight
+  // can walk through them in order instead of jumping straight to the destination line.
   const snap = (key, msg, extra = {}) => {
-    steps.push({ ...clone(st), line: L[key] ?? -1, msg, kind: 'info', ...extra });
+    const { pre = [], ...rest } = extra;
+    const lines = [...pre, key].map((k) => L[k]).filter((x) => x !== undefined);
+    const trail = lines.filter((x, i) => i === 0 || x !== lines[i - 1]);
+    steps.push({ ...clone(st), line: L[key] ?? -1, trail, msg, kind: 'info', ...rest });
   };
   return { st, steps, snap };
 }
@@ -63,6 +68,7 @@ export function traceUndirected(mode, g, start = 0) {
   const { n, edges } = g;
   const adj = buildAdj(n, edges, false);
   const { st, steps, snap } = makeRecorder(n, edges.length, mode);
+  const callPath = mode === 'ap' ? ['child', 'recurse'] : mode === 'bcc' ? ['push', 'recurse'] : ['recurse'];
   const apSet = new Set();
   const markAP = (u) => {
     apSet.add(u);
@@ -75,8 +81,14 @@ export function traceUndirected(mode, g, start = 0) {
     st.cur = u;
     st.hl = -1;
     st.callStack.push(u);
-    snap('visit', `Visit ${u}: disc[${u}] = low[${u}] = ${st.disc[u]}. For now ${u} can only "reach" itself, so low equals disc.`);
+    snap('visit', `Visit ${u}: disc[${u}] = low[${u}] = ${st.disc[u]}. For now ${u} can only "reach" itself, so low equals disc.`, { pre: pe === -1 ? ['main', 'enter'] : [...callPath, 'enter'] });
     let children = 0;
+    let pendingInit = true; // 'int children = 0;' runs once, before the first loop iteration
+    const loopPre = () => {
+      const base = pendingInit ? ['init', 'loop', 'skip'] : ['loop', 'skip'];
+      pendingInit = false;
+      return base;
+    };
 
     for (const { to: v, id } of adj[u]) {
       if (id === pe) continue; // never walk back along the edge we arrived by
@@ -88,7 +100,7 @@ export function traceUndirected(mode, g, start = 0) {
         children++;
         st.edgeKind[id] = 'tree';
         if (mode === 'bcc') st.stack.push(id);
-        snap('tree', `Edge ${u}–${v}: ${v} is unvisited, so this is a TREE edge.${mode === 'bcc' ? ' Push it on the edge stack.' : ''} Recurse into ${v}.`);
+        snap('tree', `Edge ${u}–${v}: ${v} is unvisited, so this is a TREE edge.${mode === 'bcc' ? ' Push it on the edge stack.' : ''} Recurse into ${v}.`, { pre: loopPre() });
         dfs(v, id);
 
         st.cur = u;
@@ -99,6 +111,7 @@ export function traceUndirected(mode, g, start = 0) {
         if (old !== lv) {
           snap('lowUp', `Back from ${v}. Its subtree can climb as high as low[${v}] = ${lv}; ${u} currently has low[${u}] = ${old}.`, {
             kind: 'ask',
+            pre: ['recurse'],
             quiz: pick(`${u}'s subtree includes ${v}'s subtree. What is low[${u}] after absorbing child ${v}? (now ${old}; child has ${lv})`, [old, lv], nw, `low is a minimum over the whole subtree, so ${u} inherits whatever the child can reach: min(${old}, ${lv}) = ${nw}.`),
           });
         }
@@ -153,7 +166,7 @@ export function traceUndirected(mode, g, start = 0) {
             st.blocks.push(block);
             const cut = pe !== -1;
             if (cut) markAP(u);
-            snap('block', `${lv} ≥ ${st.disc[u]} → pop edges down to and including ${u}–${v}. Block #${st.blocks.length} = ${block.map((e) => `${edges[e][0]}–${edges[e][1]}`).join(', ')}.${cut ? ` ${u} is shared with the part above it, so ${u} is an articulation point.` : ''}`, { kind: 'verdict' });
+            snap('block', `${lv} ≥ ${st.disc[u]} → pop edges down to and including ${u}–${v}. Block #${st.blocks.length} = ${block.map((e) => `${edges[e][0]}–${edges[e][1]}`).join(', ')}.${cut ? ` ${u} is shared with the part above it, so ${u} is an articulation point.` : ''}`, { kind: 'verdict', pre: ['pop'] });
           } else {
             snap('check', `${lv} < ${st.disc[u]} → keep the edges on the stack; the block continues above ${u}.`, { kind: 'verdict' });
           }
@@ -165,18 +178,25 @@ export function traceUndirected(mode, g, start = 0) {
         const dv = st.disc[v];
         const nw = Math.min(old, dv);
         const key = mode === 'bcc' ? 'pushBack' : 'back';
+        let walked = false;
+        const backPre = () => {
+          if (walked) return [];
+          walked = true;
+          return [...loopPre(), 'tree', 'else', ...(mode === 'bcc' ? ['back'] : [])];
+        };
         if (old !== dv) {
           snap('back', `Edge ${u}–${v}: ${v} is already visited and is an ancestor (disc ${dv} < ${st.disc[u]}), so this is a BACK edge.`, {
             kind: 'ask',
+            pre: backPre(),
             quiz: pick(`The back edge lands on ${v} with disc[${v}] = ${dv}. low[${u}] is ${old} now. What is the new low[${u}]?`, [old, dv], nw, `A back edge lets ${u} jump straight to ${v}, so low[${u}] = min(${old}, ${dv}) = ${nw}.`),
           });
         }
         if (mode === 'bcc') st.stack.push(id);
         st.low[u] = nw;
-        snap(key, `Back edge ${u}–${v}.${mode === 'bcc' ? ' Push it on the edge stack (once!).' : ''} low[${u}] = min(${old}, disc[${v}] = ${dv}) = ${nw}.`);
+        snap(key, `Back edge ${u}–${v}.${mode === 'bcc' ? ' Push it on the edge stack (once!).' : ''} low[${u}] = min(${old}, disc[${v}] = ${dv}) = ${nw}.`, { pre: backPre() });
       } else {
         /* ---------- same back edge, seen from the ancestor ---------- */
-        snap('back', `Edge ${u}–${v}: ${v} is a descendant that is already finished. This is the same back edge we handled from ${v}'s side, so there is nothing to do.`);
+        snap('back', `Edge ${u}–${v}: ${v} is a descendant that is already finished. This is the same back edge we handled from ${v}'s side, so there is nothing to do.`, { pre: [...loopPre(), 'tree', 'else'] });
       }
     }
 
@@ -184,11 +204,12 @@ export function traceUndirected(mode, g, start = 0) {
       const cond = children > 1;
       snap('root', `${u} is the DFS root and has ${plural(children, 'child')} in the DFS tree.`, {
         kind: 'ask',
+        pre: ['loopEnd'],
         quiz: yesNo(`Root ${u} finished with ${plural(children, 'DFS child')}. Is it an articulation point?`, cond, `A root is a cut vertex exactly when it has 2 or more DFS children: separate child subtrees have no edges between them (no cross edges in an undirected DFS).`),
       });
       if (cond) {
         markAP(u);
-        snap('root', `${children} ≥ 2 children → the child subtrees are only connected through ${u}. ${u} is an ARTICULATION POINT.`, { kind: 'verdict' });
+        snap('rootset', `${children} ≥ 2 children → the child subtrees are only connected through ${u}. ${u} is an ARTICULATION POINT.`, { kind: 'verdict' });
       } else {
         snap('root', `Only ${plural(children, 'child')} → removing ${u} cannot split the rest. Not an articulation point.`, { kind: 'verdict' });
       }
@@ -201,7 +222,9 @@ export function traceUndirected(mode, g, start = 0) {
     st.callStack.pop();
     st.cur = u;
     st.hl = -1;
-    snap('finish', `Finish ${u}.${pe === -1 && mode === 'bcc' && children > 1 ? ` The root has ${children} children, so ${u} is an articulation point.` : ''}`);
+    snap('finish', `Finish ${u}.${pe === -1 && mode === 'bcc' && children > 1 ? ` The root has ${children} children, so ${u} is an articulation point.` : ''}`, {
+      pre: mode === 'ap' ? (pe === -1 ? [] : ['loopEnd', 'root']) : ['loopEnd'],
+    });
   }
 
   snap('main', 'Initial state: every disc[] and low[] is -1 (unvisited). Pick a start vertex and run the DFS.');
@@ -232,7 +255,7 @@ export function traceSCC(g, start = 0) {
   const adj = buildAdj(n, edges, true);
   const { st, steps, snap } = makeRecorder(n, edges.length, 'scc');
 
-  function dfs(u) {
+  function dfs(u, fromMain = false) {
     st.disc[u] = st.low[u] = st.timer++;
     st.vstate[u] = 1;
     st.onStack[u] = true;
@@ -240,14 +263,14 @@ export function traceSCC(g, start = 0) {
     st.callStack.push(u);
     st.cur = u;
     st.hl = -1;
-    snap('visit', `Visit ${u}: disc[${u}] = low[${u}] = ${st.disc[u]}. Push ${u} onto Tarjan's stack.`);
+    snap('spush', `Visit ${u}: disc[${u}] = low[${u}] = ${st.disc[u]}. Push ${u} onto Tarjan's stack.`, { pre: [fromMain ? 'main' : 'recurse', 'enter', 'visit'] });
 
     for (const { to: v, id } of adj[u]) {
       st.cur = u;
       st.hl = id;
       if (st.disc[v] === -1) {
         st.edgeKind[id] = 'tree';
-        snap('tree', `Edge ${u}→${v}: ${v} is unvisited → TREE edge. Recurse into ${v}.`);
+        snap('tree', `Edge ${u}→${v}: ${v} is unvisited → TREE edge. Recurse into ${v}.`, { pre: ['loop'] });
         dfs(v);
         st.cur = u;
         st.hl = id;
@@ -257,6 +280,7 @@ export function traceSCC(g, start = 0) {
         if (old !== lv) {
           snap('lowUp', `Back from ${v}: low[${v}] = ${lv}, while low[${u}] = ${old}.`, {
             kind: 'ask',
+            pre: ['recurse'],
             quiz: pick(`What is low[${u}] after returning from child ${v}? (now ${old}; child has ${lv})`, [old, lv], nw, `${u} can reach everything its child can reach: min(${old}, ${lv}) = ${nw}.`),
           });
         }
@@ -268,6 +292,7 @@ export function traceSCC(g, start = 0) {
         const on = st.onStack[v];
         snap('check', `Edge ${u}→${v}: ${v} was already visited — a ${kind.toUpperCase()} edge. Is ${v} still on Tarjan's stack?`, {
           kind: 'ask',
+          pre: ['loop', 'tree'],
           quiz: yesNo(`${kind[0].toUpperCase() + kind.slice(1)} edge ${u}→${v}. Is ${v} still on Tarjan's stack (not yet assigned to a finished SCC)?`, on, on ? `${v} is still waiting for its SCC root to be found, so it may be in the same component as ${u}.` : `${v} was already popped into a finished SCC; it can't share a component with ${u}, or that SCC would have been bigger.`),
         });
         if (on) {
@@ -284,6 +309,7 @@ export function traceSCC(g, start = 0) {
     const isRoot = st.low[u] === st.disc[u];
     snap('root', `All edges of ${u} done. Test: low[${u}] = ${st.low[u]}, disc[${u}] = ${st.disc[u]}. Is ${u} the root of an SCC?`, {
       kind: 'ask',
+      pre: ['loopEnd'],
       quiz: yesNo(`low[${u}] = ${st.low[u]} and disc[${u}] = ${st.disc[u]}. Is ${u} the root of a strongly connected component?`, isRoot, isRoot ? `low = disc means nothing in ${u}'s subtree can reach an earlier vertex still on the stack, so ${u} is the first vertex of its SCC.` : `low < disc means ${u} can still reach an earlier vertex on the stack, so ${u} belongs to an SCC whose root is higher up.`),
     });
     if (isRoot) {
@@ -297,7 +323,7 @@ export function traceSCC(g, start = 0) {
       }
       comp.sort((a, b) => a - b);
       st.sccs.push(comp);
-      snap('block', `low = disc → ${u} is an SCC root. Pop the stack down to ${u}: SCC #${st.sccs.length} = {${comp.join(', ')}}.`, { kind: 'verdict' });
+      snap('block', `low = disc → ${u} is an SCC root. Pop the stack down to ${u}: SCC #${st.sccs.length} = {${comp.join(', ')}}.`, { kind: 'verdict', pre: ['pop'] });
     } else {
       snap('root', `low[${u}] < disc[${u}] → ${u} can still reach a vertex below it on the stack. It stays on the stack; its root will collect it.`, { kind: 'verdict' });
     }
@@ -315,7 +341,7 @@ export function traceSCC(g, start = 0) {
     if (st.disc[r] !== -1) continue;
     if (!first) snap('main', `Vertex ${r} has not been reached yet. Start a fresh DFS tree at ${r}.`);
     first = false;
-    dfs(r);
+    dfs(r, true);
   }
   st.cur = -1;
   st.hl = -1;
