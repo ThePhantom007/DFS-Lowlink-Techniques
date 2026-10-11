@@ -64,8 +64,9 @@ export default function App() {
   };
 
   return (
-    <div className="app">
+    <>
       <header className="top">
+        <div className="top-in">
         <div className="brand">
           <svg width="30" height="30" viewBox="0 0 100 100" aria-hidden="true">
             <path d="M25 70L55 30L80 72Z" stroke="var(--accent)" strokeWidth="7" fill="none" strokeLinejoin="round" />
@@ -95,8 +96,10 @@ export default function App() {
           <span className={`ti ${theme === 'dark' ? 'act' : ''}`}><IconMoon /></span>
           <span className="knob" aria-hidden="true" />
         </button>
+        </div>
       </header>
 
+      <div className="app">
       <main>
         {tab === 'viz' && <Visualizer mode={mode} setMode={setMode} graph={graph} setGraph={setGraph} start={start} setStart={setStart} onShare={onShare} />}
         {/* Learn and Practice stay mounted while hidden, so progress survives switching tabs but not a refresh */}
@@ -105,7 +108,8 @@ export default function App() {
         {tab === 'compare' && <Compare mode={mode} setMode={setMode} graph={graph} setGraph={setGraph} />}
         {tab === 'about' && <About />}
       </main>
-    </div>
+      </div>
+    </>
   );
 }
 
