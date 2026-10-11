@@ -149,6 +149,7 @@ export function Legend({ mode }) {
       <span><i className="vdot" style={{ background: 'var(--amber)' }} />on path</span>
       <span><i className="vdot" style={{ background: 'var(--accent)' }} />finished</span>
       {mode !== 'scc' && <span><i className="vdot ring" />cut vertex</span>}
+      {(mode === 'bcc' || mode === 'scc') && <span><i style={{ background: 'transparent', borderTop: '3px dotted var(--text)', height: 0 }} />{mode === 'bcc' ? 'dotted outline = one block' : 'dotted outline = one SCC'}</span>}
       <span className="muted">labels: disc / low</span>
     </div>
   );

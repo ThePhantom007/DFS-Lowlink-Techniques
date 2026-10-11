@@ -22,22 +22,3 @@ export const QUIZ = [
   { q: 'Both endpoints of a bridge have degree ≥ 2. What can you say about them?', o: ['Both are articulation points', 'Neither is an articulation point', 'Exactly one is', 'They are in the same block'], a: 0, w: 'Deleting an endpoint strands the other side together with any other neighbours of the other endpoint.' },
   { q: 'Using disc[] instead of low[v] when absorbing a tree child (low[u] = min(low[u], disc[v])) would…', o: ['Ignore back edges deeper in v\'s subtree and give wrong answers', 'Be exactly the same', 'Only affect leaves', 'Fix the root case'], a: 0, w: 'A child\'s subtree can have a back edge far above; only low[v] carries that information up.' },
 ];
-
-export const FLASH = [
-  { q: 'Define an articulation point and state the test.', a: 'A vertex whose removal increases the number of connected components. Non-root u with DFS child v: low[v] ≥ disc[u]. Root: at least two DFS children.' },
-  { q: 'Define a bridge and state the test.', a: 'An edge whose removal disconnects the graph (an edge on no cycle). Tree edge (u, v) with low[v] > disc[u].' },
-  { q: 'Why is the bridge test strict but the articulation test not?', a: 'If a back edge lands exactly on u (low[v] = disc[u]), (u, v) is on a cycle through u, so it is not a bridge; but v\'s subtree still cannot get past u, so u is a cut vertex.' },
-  { q: 'What is a biconnected component?', a: 'A maximal set of edges where any two lie on a common simple cycle; equivalently a maximal subgraph with no articulation point. Blocks partition the edges and may share cut vertices.' },
-  { q: 'How does the edge stack work?', a: 'Push each tree edge on descent and each back edge once (from the descendant). When low[v] ≥ disc[u] after returning from v, pop until (u, v) is popped. The popped edges form one block.' },
-  { q: 'What is the block-cut tree and why is it a tree?', a: 'One node per block, one per cut vertex, connect a cut vertex to the blocks containing it. A cycle would force its blocks to merge into one bigger block, contradicting maximality.' },
-  { q: 'Why does an undirected DFS have no cross edges?', a: 'If u and v were in different subtrees with an edge between them, whichever was visited first would have traversed that edge before finishing, making the other its descendant.' },
-  { q: 'What do disc and low store, and how is low computed?', a: 'disc[u] is discovery time. low[u] = min(disc[u], disc[w] over back edges (u, w), low[c] over DFS children c).' },
-  { q: 'Why must the root be handled separately for articulation points?', a: 'The root has no ancestors, so low[v] ≥ disc[root] is always true. Use the child count instead: ≥ 2 children means it connects separate subtrees.' },
-  { q: 'What is the time and space complexity?', a: 'O(V + E) time, O(V) extra space (disc, low, stacks, recursion) beyond the O(V + E) graph.' },
-  { q: 'Explain Tarjan\'s algorithm in one breath.', a: 'DFS with disc/low and a vertex stack. Tree edge: recurse and take min of low. Visited neighbour still on the stack: low[u] = min(low[u], disc[v]). When low[u] = disc[u], pop the stack through u: that is one SCC.' },
-  { q: 'Why does Tarjan need onStack[]?', a: 'Directed DFS has cross edges to finished SCCs. Those vertices are not in u\'s component, so they must not lower low[u]; onStack[] filters them out.' },
-  { q: 'Tarjan versus Kosaraju?', a: 'Both are O(V + E). Kosaraju needs two DFS passes and the reversed graph; Tarjan is single-pass with low-link values and a stack.' },
-  { q: 'How do you handle parallel edges?', a: 'Skip the parent by edge id, not by vertex. A second edge to the parent is a genuine back edge, which correctly stops that edge being a bridge.' },
-  { q: 'What if the graph is disconnected?', a: 'Run the DFS from every unvisited vertex; each tree is analysed separately. Roots of each tree use the root rule.' },
-  { q: 'Real-world uses?', a: 'Finding single points of failure in networks, critical routers and cables, road-closure analysis, circuit design, compiler analysis (SCCs of call graphs and 2-SAT), and decomposing graphs for faster algorithms.' },
-];

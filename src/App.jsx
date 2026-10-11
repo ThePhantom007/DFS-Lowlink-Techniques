@@ -99,9 +99,10 @@ export default function App() {
 
       <main>
         {tab === 'viz' && <Visualizer mode={mode} setMode={setMode} graph={graph} setGraph={setGraph} start={start} setStart={setStart} onShare={onShare} />}
-        {tab === 'learn' && <Learn onTry={tryIt} />}
-        {tab === 'practice' && <Practice />}
-        {tab === 'compare' && <Compare mode={mode} setMode={setMode} graph={graph} />}
+        {/* Learn and Practice stay mounted while hidden, so progress survives switching tabs but not a refresh */}
+        <div hidden={tab !== 'learn'}><Learn onTry={tryIt} /></div>
+        <div hidden={tab !== 'practice'}><Practice /></div>
+        {tab === 'compare' && <Compare mode={mode} setMode={setMode} graph={graph} setGraph={setGraph} />}
         {tab === 'about' && <About />}
       </main>
     </div>
@@ -129,7 +130,7 @@ function About() {
             <li><b>Edit anything</b>: drag, add and delete vertices and edges, paste an edge list, pick a start vertex, or load 13 curated presets.</li>
             <li><b>Block-cut tree</b> that grows live as blocks pop.</li>
             <li><b>Learn</b>: ten short lessons with proofs, traps and "try it" buttons.</li>
-            <li><b>Practice</b>: quiz, Trace-it (compute low by hand), Spot-it (find cut vertices and bridges), viva flashcards.</li>
+            <li><b>Practice</b>: a quiz, Trace-it (compute low by hand) and Spot-it (find cut vertices and bridges).</li>
             <li><b>Share</b> any graph as a link.</li>
           </ul>
         </div>

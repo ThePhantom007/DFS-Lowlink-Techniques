@@ -40,14 +40,16 @@ Settings if asked: Framework = Vite, Build = `npm run build`, Output = `dist`.
 - **Predict mode**: playback pauses at each decision (new `low` value, "is it a cut vertex?", "is it a bridge?", "pop a block?", "is it on the Tarjan stack?") and asks you to answer before revealing the result, with a running score.
 - **What-if tool**: delete vertices or edges and see the remaining components, to verify a cut vertex or bridge by brute force.
 - Graph editor: drag, add and delete vertices and edges, paste an edge list, choose the DFS start vertex, random graphs, 13 curated presets (root case, parallel edges, disconnected graph, cross-edge trap, ...), shareable links.
-- Block-cut tree that grows as blocks are popped.
+- Block-cut tree that grows as blocks are popped. When the biconnected-components run finishes, the page scrolls to it and the card glows so it isn't missed.
+- Dotted outlines drawn around every block (biconnected components) and every strongly connected component as they are found.
+- A one-line description of every toolbar control appears directly under the toolbar (the active tool, or whatever you hover).
 - Light and dark themes (sun/moon switch, follows your system setting by default) with a blue colour scheme and theme-aware highlights.
 
-**Learn**: ten short lessons with formulas, proof sketches, common traps and "Try it" buttons that jump to the right preset. Progress is saved in the browser.
+**Learn**: ten short lessons with formulas, proof sketches, common traps and "Try it" buttons that jump to the right preset. Progress lasts for the session and resets when the page is refreshed.
 
-**Practice**: Quiz (21-question bank, 10 shuffled per round), *Trace it* (compute `low[]` by hand and get checked), *Spot it* (find cut vertices or bridges on random graphs, with streaks), and 16 viva flashcards.
+**Practice**: Quiz (21-question bank, 10 shuffled per round), *Trace it* (compute `low[]` by hand and get checked), *Spot it* (find cut vertices or bridges on random graphs, with streaks).
 
-**Compare**: the same graph through every lens (cut vertices, bridges, blocks, block-cut tree, or SCCs plus the condensation DAG) and a table of the test each algorithm uses.
+**Compare**: pick a preset or random graph (or edit it in the Visualizer) and see the same graph through every lens (cut vertices, bridges, blocks, block-cut tree, or SCCs plus the condensation DAG) and a table of the test each algorithm uses.
 
 ## Code structure
 
@@ -60,7 +62,7 @@ src/
   components/
     Visualizer.jsx  GraphCanvas.jsx  Panels.jsx  BlockCutTree.jsx
     Learn.jsx  Practice.jsx  Compare.jsx
-  data/           lessons.js, practice.js (quiz + flashcards)
+  data/           lessons.js, practice.js (quiz questions)
   App.jsx  main.jsx  styles.css  store.js
 tests/
   engine.test.mjs   brute-force checks (run with `npm test`)

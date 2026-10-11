@@ -59,6 +59,32 @@ function edgeStyle(i, step, mode) {
   return k ? KIND_STYLE[k] : base;
 }
 
+// Rounded convex outline around a set of vertices: hull of circles of radius `pad` around each one.
+function hullPath(pts, pad) {
+  const all = [];
+  pts.forEach((p) => {
+    for (let k = 0; k < 24; k++) {
+      const a = (2 * Math.PI * k) / 24;
+      all.push([p.x + Math.cos(a) * pad, p.y + Math.sin(a) * pad]);
+    }
+  });
+  all.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower = [];
+  for (const p of all) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
+    lower.push(p);
+  }
+  const upper = [];
+  for (let i = all.length - 1; i >= 0; i--) {
+    const p = all[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  const hull = lower.slice(0, -1).concat(upper.slice(0, -1));
+  return `M${hull.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join('L')}Z`;
+}
+
 export default function GraphCanvas({
   graph,
   directed = false,
@@ -71,11 +97,22 @@ export default function GraphCanvas({
   eOverride,
   onClickV,
   onClickE,
+  pending: pendingProp,
+  onPending,
 }) {
   const svgRef = useRef(null);
   const dragRef = useRef(null);
-  const [pending, setPending] = useState(null);
+  const [pendingLocal, setPendingLocal] = useState(null);
+  const pending = pendingProp !== undefined ? pendingProp : pendingLocal;
+  const setPending = onPending || setPendingLocal;
   const geo = useMemo(() => geometry(graph, directed), [graph, directed]);
+
+  // dotted outlines around every finished block (BCC) or strongly connected component (SCC)
+  const outlines = useMemo(() => {
+    if (!step || (mode !== 'bcc' && mode !== 'scc')) return [];
+    const groups = mode === 'bcc' ? step.blocks.map((b) => [...new Set(b.flatMap((e) => graph.edges[e] || []))]) : step.sccs;
+    return groups.map((vs, i) => ({ i, d: hullPath(vs.map((v) => graph.pos[v]).filter(Boolean), R + 11) }));
+  }, [step, mode, graph]);
 
   const toSvg = (e) => {
     const svg = svgRef.current;
@@ -94,6 +131,7 @@ export default function GraphCanvas({
   };
 
   const onBgDown = (e) => {
+    if (e.target.closest?.('[data-v]')) return; // presses on a vertex belong to the vertex, not the canvas
     if (tool === 'addv' && onChange && graph.n < MAX_N) {
       const p = toSvg(e);
       onChange({ ...graph, n: graph.n + 1, pos: [...graph.pos, { x: Math.round(p.x), y: Math.round(p.y) }] });
@@ -162,6 +200,20 @@ export default function GraphCanvas({
         ))}
       </defs>
 
+      {outlines.map((o) => (
+        <path
+          key={`o${o.i}`}
+          d={o.d}
+          fill={PALETTE[o.i % PALETTE.length]}
+          fillOpacity="0.08"
+          stroke={PALETTE[o.i % PALETTE.length]}
+          strokeWidth="3.2"
+          strokeDasharray="0.1 8"
+          strokeLinecap="round"
+          style={{ pointerEvents: 'none' }}
+        />
+      ))}
+
       {/* BCC edge-stack underlay */}
       {step && mode === 'bcc' &&
         step.stack.map((id) => (
@@ -200,6 +252,7 @@ export default function GraphCanvas({
         return (
           <g
             key={v}
+            data-v={v}
             transform={`translate(${p.x} ${p.y})`}
             opacity={o.opacity ?? 1}
             style={{ cursor: tool === 'move' ? 'grab' : tool === 'adde' || tool === 'del' || tool === 'pick' ? 'pointer' : 'default' }}
@@ -234,7 +287,7 @@ export default function GraphCanvas({
 
       {graph.n === 0 && (
         <text x={W / 2} y={H / 2} textAnchor="middle" fill="var(--muted)" fontSize="16">
-          Empty graph — choose “+ Vertex” and click here, or load a preset.
+          Empty graph — choose “Add Vertex” and click here, or load a preset.
         </text>
       )}
     </svg>

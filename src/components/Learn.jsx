@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { LESSONS } from '../data/lessons.js';
-import { load, save } from '../store.js';
 
 export function Rich({ text }) {
   const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g);
@@ -32,14 +31,13 @@ function Block({ b, onTry }) {
 
 export default function Learn({ onTry }) {
   const [cur, setCur] = useState(0);
-  const [done, setDone] = useState(() => load('dll-read', []));
+  const [done, setDone] = useState([]); // lives only in memory: a refresh starts everything from scratch
   const lesson = LESSONS[cur];
   const isDone = done.includes(lesson.id);
 
   const toggleDone = () => {
     const nd = isDone ? done.filter((d) => d !== lesson.id) : [...done, lesson.id];
     setDone(nd);
-    save('dll-read', nd);
   };
   const pct = Math.round((done.length / LESSONS.length) * 100);
 
@@ -55,13 +53,13 @@ export default function Learn({ onTry }) {
             <span className={`tick ${done.includes(l.id) ? 'y' : ''}`}>{done.includes(l.id) ? '✓' : i + 1}</span>
             <span>
               <b>{l.title}</b>
-              <small>{l.minutes} min · {l.summary}</small>
+              <small>{l.summary}</small>
             </span>
           </button>
         ))}
       </nav>
       <article className="lbody card">
-        <div className="kicker">Lesson {cur + 1} of {LESSONS.length} · {lesson.minutes} min</div>
+        <div className="kicker">Lesson {cur + 1} of {LESSONS.length}</div>
         <h2>{lesson.title}</h2>
         {lesson.blocks.map((b, i) => <Block key={i} b={b} onTry={onTry} />)}
         <div className="lfoot">

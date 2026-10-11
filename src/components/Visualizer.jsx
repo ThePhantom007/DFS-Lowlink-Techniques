@@ -15,11 +15,26 @@ export const MODES = [
 
 const TOOLS = [
   ['move', 'Move'],
-  ['addv', '+ Vertex'],
-  ['adde', '+ Edge'],
+  ['addv', 'Add Vertex'],
+  ['adde', 'Add Edge'],
   ['del', 'Delete'],
   ['whatif', 'What-if'],
 ];
+
+// One short description per control, shown directly under the toolbar (the active tool, or whatever is hovered / focused).
+const HELP = {
+  move: ['Move', 'Drag any vertex to rearrange the drawing. Positions never change the algorithm, only how readable the graph is.'],
+  addv: ['Add Vertex', 'Click on empty space in the graph to place a new vertex (up to 24). It starts with no edges.'],
+  adde: ['Add Edge', 'Click one vertex, then another, to connect them. Duplicate edges are ignored; click empty space to cancel.'],
+  adde_d: ['Add Edge', 'Click the vertex the edge starts from, then the vertex it points to. Click empty space to cancel.'],
+  del: ['Delete', 'Click a vertex to remove it together with its edges, or click an edge to remove only that edge. The remaining vertices are renumbered.'],
+  whatif: ['What-if', 'Click vertices or edges to remove them temporarily and see how many separate pieces the graph breaks into. Click again to restore. A cut vertex or bridge always increases the count.'],
+  preset: ['Preset graphs', 'Load a ready-made example that shows one behaviour clearly, such as the root rule, parallel edges or a disconnected graph.'],
+  start: ['Start vertex', 'Choose where the DFS begins. It changes the DFS tree and which vertex counts as the root.'],
+  random: ['Random', 'Generate a new random graph to experiment with.'],
+  edgelist: ['Edge list', 'Show the graph as text, one edge per line like 0-1. Edit it or paste your own, then press Apply.'],
+  share: ['Share', 'Copy a link that opens this exact graph and technique.'],
+};
 
 // Keyboard shortcuts must not hijack typing, slider/select arrows, or Space on a focused button or checkbox.
 const typing = (e) => {
@@ -48,6 +63,11 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
   const [text, setText] = useState('');
   const [textErr, setTextErr] = useState('');
   const [copied, setCopied] = useState(false);
+  const [hint, setHint] = useState(null);
+  const [pendingV, setPendingV] = useState(null);
+  const [glow, setGlow] = useState(false);
+  const bctRef = useRef(null);
+  const hv = (k) => ({ onMouseEnter: () => setHint(k), onMouseLeave: () => setHint(null), onFocus: () => setHint(k), onBlur: () => setHint(null) });
 
   const steps = useMemo(() => runTrace(mode, graph, start), [mode, graph.n, graph.edges, start]); // eslint-disable-line
   useEffect(() => {
@@ -85,8 +105,8 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
       if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
       else if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
       else if (e.key === ' ') { e.preventDefault(); setPlaying((p) => !p); }
-      else if (e.key === 'Home') setIdx(0);
-      else if (e.key === 'End') setIdx(last);
+      else if (e.key === 'Home') { e.preventDefault(); setIdx(0); }
+      else if (e.key === 'End') { e.preventDefault(); setIdx(last); }
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
@@ -157,6 +177,7 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
   const changeGraph = (g) => {
     setGraph(g);
     setPresetId(null);
+    setPendingV(null);
   };
 
   const loadPreset = (id) => {
@@ -213,6 +234,25 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
   const eOverride = wi ? (i) => { const [a, b] = graph.edges[i]; return remE.has(i) || remV.has(a) || remV.has(b) ? { opacity: 0.18, dash: '3 7' } : null; } : undefined;
 
   const bct = useMemo(() => (step && mode === 'bcc' ? blockCutTree(step.blocks, graph.edges) : null), [step, mode, graph.edges]);
+  // When the biconnected-components run ends, bring the finished block-cut tree into view and make it glow.
+  useEffect(() => {
+    if (mode !== 'bcc' || last < 1 || idx !== last) return undefined;
+    setGlow(true);
+    const el = bctRef.current;
+    const box = el?.closest('.vright');
+    if (el && box && window.getComputedStyle(box).position === 'sticky') {
+      // wide layout: scroll only the side panel, so the graph stays where it is
+      box.scrollTo?.({ top: Math.max(0, el.offsetTop - (box.clientHeight - el.clientHeight) / 2), behavior: 'smooth' });
+    } else {
+      el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    }
+    const t = setTimeout(() => setGlow(false), 4500);
+    return () => { clearTimeout(t); setGlow(false); };
+  }, [idx, mode, steps]); // eslint-disable-line
+
+  const hintKey = hint || tool;
+  const [helpTitle, helpText] = HELP[hintKey === 'adde' && directed ? 'adde_d' : hintKey] || HELP.move;
+
   const kindLabel = { ask: 'Question', verdict: 'Verdict', done: 'Done', info: 'Step' }[step?.kind || 'info'];
 
   if (!step) {
@@ -220,7 +260,7 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
       <div className="viz">
         <section className="vleft card">
           <div className="toolbar">
-            <button onClick={() => setTool('addv')}>+ Vertex</button>
+            <button onClick={() => setTool('addv')}>Add Vertex</button>
             <select value="" onChange={(e) => loadPreset(e.target.value)}>
               <option value="">Load a preset…</option>
               {presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -245,21 +285,31 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
           <div className="toolbar">
             <div className="seg" role="group" aria-label="Editing tool">
               {TOOLS.filter(([t]) => !(directed && t === 'whatif')).map(([t, l]) => (
-                <button key={t} className={tool === t ? 'on' : ''} onClick={() => { setTool(t); }}>{l}</button>
+                <button key={t} className={tool === t ? 'on' : ''} onClick={() => { setTool(t); setPendingV(null); }} {...hv(t)}>{l}</button>
               ))}
             </div>
-            <select aria-label="Preset graphs" value={presetId || ''} onChange={(e) => loadPreset(e.target.value)}>
+            <select aria-label="Preset graphs" value={presetId || ''} onChange={(e) => loadPreset(e.target.value)} {...hv('preset')}>
               <option value="">Preset graphs…</option>
               {presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
-            <label className="inl">start
+            <label className="inl" {...hv('start')}>start
               <select value={start} onChange={(e) => setStart(+e.target.value)}>
                 {graph.pos.map((_, v) => <option key={v} value={v}>{v}</option>)}
               </select>
             </label>
-            <button onClick={randomize}>Random</button>
-            <button onClick={openEditor}>{editing ? 'Close list' : 'Edge list'}</button>
-            <button onClick={share}>{copied ? 'Link copied' : 'Share'}</button>
+            <button onClick={randomize} {...hv('random')}>Random</button>
+            <button onClick={openEditor} {...hv('edgelist')}>{editing ? 'Close list' : 'Edge list'}</button>
+            <button onClick={share} {...hv('share')}>{copied ? 'Link copied' : 'Share'}</button>
+          </div>
+
+          <div className="toolhelp" role="status" aria-live="polite">
+            <div><b>{helpTitle}.</b> {helpText}</div>
+            {tool === 'adde' && pendingV !== null && <div className="toolnote">Vertex {pendingV} selected. Now click the vertex to {directed ? 'point to' : 'connect it to'}.</div>}
+            {tool === 'whatif' && (
+              <div className="toolnote">
+                {wi ? <>Remaining graph: <b>{wi.count}</b> component{wi.count === 1 ? '' : 's'} (originally {base}). {wiVerdict} <button className="ghost" onClick={() => { setRemV(new Set()); setRemE(new Set()); }}>Restore</button></> : 'Nothing removed yet.'}
+              </div>
+            )}
           </div>
 
           {editing && (
@@ -275,15 +325,7 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
 
           {presetId && <p className="presetdesc">{presets.find((p) => p.id === presetId)?.desc}</p>}
 
-          <GraphCanvas graph={graph} directed={directed} step={step} mode={mode} tool={canvasTool} onChange={changeGraph} vOverride={vOverride} eOverride={eOverride} onClickV={toggle(setRemV)} onClickE={toggle(setRemE)} />
-
-          {tool === 'whatif' && (
-            <div className="whatif">
-              <b>What-if:</b> click vertices or edges to delete them and watch the graph fall apart.
-              {wi ? <> Remaining graph: <b>{wi.count}</b> component{wi.count === 1 ? '' : 's'} (originally {base}). {wiVerdict} <button className="ghost" onClick={() => { setRemV(new Set()); setRemE(new Set()); }}>Restore</button></> : null}
-            </div>
-          )}
-          {tool === 'adde' && <div className="whatif">Click one vertex, then another, to add an edge.</div>}
+          <GraphCanvas graph={graph} directed={directed} step={step} mode={mode} tool={canvasTool} onChange={changeGraph} vOverride={vOverride} eOverride={eOverride} onClickV={toggle(setRemV)} onClickE={toggle(setRemE)} pending={pendingV} onPending={setPendingV} />
           <Legend mode={mode} />
         </div>
 
@@ -354,8 +396,11 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
           <CodePanel mode={mode} line={shown} prev={prevShown} fast={replaying > 0} />
         </div>
         {bct && (
-          <div className="card">
-            <div className="cardh">Block-cut tree (grows as blocks are popped)</div>
+          <div ref={bctRef} className={`card ${glow ? 'glow' : ''}`}>
+            <div className="cardh">
+              Block-cut tree (grows as blocks are popped)
+              {glow && <span className="ffwd">Complete</span>}
+            </div>
             <BlockCutTree bct={bct} />
             <p className="muted small">Rectangles are blocks, dashed circles are cut vertices. Blocks only touch through cut vertices, so the result is always a tree (or forest).</p>
           </div>

@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
 import GraphCanvas from './GraphCanvas.jsx';
-import { QUIZ, FLASH } from '../data/practice.js';
+import { QUIZ } from '../data/practice.js';
 import { runTrace } from '../engine/traces.js';
 import { randomUndirected } from '../engine/graphs.js';
-import { load, save } from '../store.js';
 
 const shuffle = (arr) => {
   const a = [...arr];
@@ -18,7 +17,6 @@ const SUBS = [
   ['quiz', 'Quiz'],
   ['trace', 'Trace it'],
   ['spot', 'Spot it'],
-  ['flash', 'Viva flashcards'],
 ];
 
 export default function Practice() {
@@ -33,7 +31,6 @@ export default function Practice() {
       {sub === 'quiz' && <Quiz />}
       {sub === 'trace' && <TraceIt />}
       {sub === 'spot' && <SpotIt />}
-      {sub === 'flash' && <Flashcards />}
     </div>
   );
 }
@@ -51,7 +48,7 @@ function Quiz() {
   const [i, setI] = useState(0);
   const [chosen, setChosen] = useState(null);
   const [score, setScore] = useState(0);
-  const [best, setBest] = useState(() => load('dll-best', 0));
+  const [best, setBest] = useState(0);
   const done = i >= deck.length;
 
   const pick = (k) => {
@@ -65,7 +62,6 @@ function Quiz() {
     setChosen(null);
     if (ni >= deck.length && score > best) {
       setBest(score);
-      save('dll-best', score);
     }
   };
   const restart = () => { setDeck(buildDeck()); setI(0); setChosen(null); setScore(0); };
@@ -98,41 +94,6 @@ function Quiz() {
           <button className="primary" onClick={next}>{i === deck.length - 1 ? 'Finish' : 'Next question →'}</button>
         </>
       )}
-    </div>
-  );
-}
-
-/* ---------------------------- Flashcards ---------------------------- */
-function Flashcards() {
-  const [order, setOrder] = useState(() => FLASH.map((_, i) => i));
-  const [i, setI] = useState(0);
-  const [flip, setFlip] = useState(false);
-  const [known, setKnown] = useState(() => new Set(load('dll-known', [])));
-  const card = FLASH[order[i]];
-
-  const go = (d) => { setFlip(false); setI((x) => (x + d + order.length) % order.length); };
-  const mark = () => {
-    const n = new Set(known);
-    n.has(order[i]) ? n.delete(order[i]) : n.add(order[i]);
-    setKnown(n);
-    save('dll-known', [...n]);
-  };
-
-  return (
-    <div>
-      <p className="muted">Questions your professor is likely to ask. Say the answer out loud first, then flip the card.</p>
-      <div className={`flash ${flip ? 'flipped' : ''}`} onClick={() => setFlip((f) => !f)} role="button" tabIndex={0} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setFlip((f) => !f))} aria-label="Flip card">
-        <div className="fk">{flip ? 'Answer' : `Question ${i + 1} of ${order.length}`}{known.has(order[i]) && <span className="tag ok">known</span>}</div>
-        <div className="ft">{flip ? card.a : card.q}</div>
-        <div className="muted small">click or press Enter to flip</div>
-      </div>
-      <div className="pbtns center">
-        <button onClick={() => go(-1)}>← Prev</button>
-        <button className={known.has(order[i]) ? '' : 'primary'} onClick={mark}>{known.has(order[i]) ? 'Unmark' : 'I know this'}</button>
-        <button onClick={() => go(1)}>Next →</button>
-        <button onClick={() => { setOrder(shuffle(order)); setI(0); setFlip(false); }}>Shuffle</button>
-      </div>
-      <p className="muted center small">{known.size} of {FLASH.length} marked as known</p>
     </div>
   );
 }

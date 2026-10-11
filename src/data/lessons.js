@@ -5,7 +5,6 @@ export const LESSONS = [
   {
     id: 'intro',
     title: 'The big picture',
-    minutes: 4,
     summary: 'What "connectivity" questions are, and why one DFS can answer so many.',
     blocks: [
       { t: 'p', text: 'Imagine a network of routers, roads or friendships. Three natural questions come up: **which single node, if it fails, splits the network?** **Which single link?** And **which parts are so well connected that no single failure can separate them?**' },
@@ -24,7 +23,6 @@ export const LESSONS = [
   {
     id: 'dfstree',
     title: 'The DFS tree and its edges',
-    minutes: 5,
     summary: 'Why an undirected DFS only produces tree edges and back edges.',
     blocks: [
       { t: 'p', text: 'Run DFS and remember which edge discovered each vertex. Those edges form the **DFS tree** (a forest if the graph is disconnected). Every other edge is a **non-tree edge**.' },
@@ -46,7 +44,6 @@ export const LESSONS = [
   {
     id: 'disclow',
     title: 'disc and low: the two numbers',
-    minutes: 7,
     summary: 'The single idea behind all five techniques.',
     blocks: [
       { t: 'p', text: '**disc[u]** is the time at which DFS first visits u (a simple counter 0, 1, 2, …). It numbers vertices in the order they are discovered, so ancestors always have smaller disc than descendants.' },
@@ -62,7 +59,6 @@ export const LESSONS = [
   {
     id: 'ap',
     title: 'Articulation points',
-    minutes: 6,
     summary: 'Cut vertices: the non-root rule and the root rule.',
     blocks: [
       { t: 'p', text: 'A vertex is an **articulation point** if deleting it (and its edges) increases the number of connected components.' },
@@ -80,7 +76,6 @@ export const LESSONS = [
   {
     id: 'bridges',
     title: 'Bridges',
-    minutes: 5,
     summary: 'The strict inequality that separates a bridge from a cut vertex.',
     blocks: [
       { t: 'p', text: 'A **bridge** is an edge whose removal disconnects the graph. Bridges are exactly the edges that lie on **no cycle**.' },
@@ -101,7 +96,6 @@ export const LESSONS = [
   {
     id: 'bcc',
     title: 'Biconnected components',
-    minutes: 8,
     summary: 'Grouping edges into blocks with an edge stack.',
     blocks: [
       { t: 'p', text: 'A **biconnected component** (or **block**) is a maximal set of edges such that any two of them lie on a common simple cycle. Equivalently, it is a maximal subgraph that stays connected after removing any one vertex.' },
@@ -128,7 +122,6 @@ export const LESSONS = [
   {
     id: 'bct',
     title: 'The block-cut tree',
-    minutes: 5,
     summary: 'A map of how blocks hang together through cut vertices.',
     blocks: [
       { t: 'p', text: 'Build a new graph with **one node per block** and **one node per cut vertex**. Connect a cut vertex to every block that contains it. The result is the **block-cut tree**.' },
@@ -146,7 +139,6 @@ export const LESSONS = [
   {
     id: 'scc',
     title: 'Strongly connected components (Tarjan)',
-    minutes: 8,
     summary: 'The same trick on directed graphs, and why onStack[] matters.',
     blocks: [
       { t: 'p', text: 'In a directed graph, an **SCC** is a maximal set of vertices where every vertex can reach every other along directed edges. Collapsing each SCC gives a DAG (the **condensation**).' },
@@ -168,7 +160,6 @@ export const LESSONS = [
   {
     id: 'complexity',
     title: 'Complexity and correctness',
-    minutes: 5,
     summary: 'Why O(V + E), and the proof ideas behind the tests.',
     blocks: [
       { t: 'h', text: 'Running time' },
@@ -190,7 +181,6 @@ export const LESSONS = [
   {
     id: 'cheat',
     title: 'Cheat sheet and common traps',
-    minutes: 3,
     summary: 'The revision page: rules, edge cases, and what examiners probe.',
     blocks: [
       { t: 'h', text: 'Rules at a glance' },
@@ -210,7 +200,7 @@ export const LESSONS = [
         'Forgetting that a vertex can be in several blocks but an edge in only one.',
         'Forgetting to restart DFS for disconnected graphs.',
       ] },
-      { t: 'tip', text: 'Finish by doing the Practice tab: the Quiz, the viva flashcards, and the Trace-it and Spot-it drills.' },
+      { t: 'tip', text: 'Finish by doing the Practice tab: the Quiz and the Trace-it and Spot-it drills.' },
     ],
   },
 ];
