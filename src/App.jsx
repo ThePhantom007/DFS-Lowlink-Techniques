@@ -3,6 +3,8 @@ import Visualizer from './components/Visualizer.jsx';
 import Learn from './components/Learn.jsx';
 import Practice from './components/Practice.jsx';
 import Compare from './components/Compare.jsx';
+import Applications from './components/Applications.jsx';
+import Performance from './components/Performance.jsx';
 import { IconSun, IconMoon } from './components/Icons.jsx';
 import { PRESETS_U, PRESETS_D, encodeShare, decodeShare } from './engine/graphs.js';
 import { load, save } from './store.js';
@@ -12,6 +14,8 @@ const TABS = [
   ['learn', 'Learn'],
   ['practice', 'Practice'],
   ['compare', 'Compare'],
+  ['apps', 'Applications'],
+  ['perf', 'Performance'],
   ['about', 'About'],
 ];
 
@@ -24,12 +28,15 @@ export default function App() {
     d: shared?.d || PRESETS_D[0].make(),
   }));
   const [start, setStart] = useState(shared?.start || 0);
+  const [bug, setBug] = useState(null); // id of the injected mistake ("Break the algorithm"), or null for the correct algorithm
+  const [lang, setLang] = useState(() => { const l = load('dll-lang', 'cpp'); return ['cpp', 'py', 'java'].includes(l) ? l : 'cpp'; });
   const [theme, setTheme] = useState(() => load('dll-theme', null) || (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
 
   const directed = mode === 'scc';
   const graph = directed ? graphs.d : graphs.u;
   const setGraph = (g) => setGraphs((p) => ({ ...p, [directed ? 'd' : 'u']: g }));
 
+  useEffect(() => { save('dll-lang', lang); }, [lang]);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     save('dll-theme', theme);
@@ -49,6 +56,17 @@ export default function App() {
     setTab('viz');
     window.scrollTo({ top: 0 });
   };
+
+  // jump to the Visualizer with a given graph (optionally with a bug switched on)
+  const openGraph = (m, g, bugId = null) => {
+    setMode(m);
+    if (g) setGraphs((p) => ({ ...p, [m === 'scc' ? 'd' : 'u']: { n: g.n, edges: g.edges.map((e) => [...e]), pos: g.pos.map((q) => ({ ...q })) } }));
+    setStart(0);
+    setBug(bugId);
+    setTab('viz');
+    window.scrollTo({ top: 0 });
+  };
+  const openTab = (t) => { setTab(t); window.scrollTo({ top: 0 }); };
 
   const onShare = async () => {
     const enc = encodeShare({ mode, u: graphs.u, d: graphs.d, start });
@@ -101,11 +119,13 @@ export default function App() {
 
       <div className="app">
       <main>
-        {tab === 'viz' && <Visualizer mode={mode} setMode={setMode} graph={graph} setGraph={setGraph} start={start} setStart={setStart} onShare={onShare} />}
+        {tab === 'viz' && <Visualizer mode={mode} setMode={setMode} graph={graph} setGraph={setGraph} start={start} setStart={setStart} onShare={onShare} bug={bug} setBug={setBug} lang={lang} setLang={setLang} onOpenTab={openTab} />}
         {/* Learn and Practice stay mounted while hidden, so progress survives switching tabs but not a refresh */}
         <div hidden={tab !== 'learn'}><Learn onTry={tryIt} /></div>
-        <div hidden={tab !== 'practice'}><Practice /></div>
+        <div hidden={tab !== 'practice'}><Practice lang={lang} setLang={setLang} onOpenGraph={openGraph} /></div>
         {tab === 'compare' && <Compare mode={mode} setMode={setMode} graph={graph} setGraph={setGraph} />}
+        {tab === 'apps' && <Applications graphU={graphs.u} onOpenGraph={openGraph} />}
+        {tab === 'perf' && <Performance />}
         {tab === 'about' && <About />}
       </main>
       </div>
@@ -135,6 +155,10 @@ function About() {
             <li><b>Block-cut tree</b> that grows live as blocks pop.</li>
             <li><b>Learn</b>: ten short lessons with proofs, traps and "try it" buttons.</li>
             <li><b>Practice</b>: a quiz, Trace-it (compute low by hand) and Spot-it (find cut vertices and bridges).</li>
+            <li><b>Break the algorithm</b>: inject a classic bug (skip the root rule, &gt; instead of ≥, push a back edge twice, drop <code>onStack</code>, ...), watch it give a wrong answer and see the exact step where it diverges.</li>
+            <li><b>DFS tree panel</b>: see why each <code>low</code> has its value, and the whole subtree being tested.</li>
+            <li><b>Applications</b>: a router-failure simulator and 2-SAT solved with SCCs. <b>Performance</b>: operation counts and a benchmark against brute force.</li>
+            <li><b>Code</b> in C++, Python or Java.</li>
             <li><b>Share</b> any graph as a link.</li>
           </ul>
         </div>

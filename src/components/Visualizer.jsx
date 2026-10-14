@@ -2,8 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import GraphCanvas, { PALETTE } from './GraphCanvas.jsx';
 import BlockCutTree from './BlockCutTree.jsx';
 import { IconPlay, IconPause, IconStart, IconEnd, IconBack, IconNext } from './Icons.jsx';
-import { CodePanel, StatePanel, Legend } from './Panels.jsx';
+import { CodePanel, StatePanel, Legend, LangToggle, OpCounter } from './Panels.jsx';
+import DfsTree from './DfsTree.jsx';
+import BugCard from './BugCard.jsx';
 import { runTrace, blockCutTree } from '../engine/traces.js';
+import { BUGS, bugsFor, MARKS } from '../engine/code.js';
+import { compareBug, findCounterexample } from '../engine/bugs.js';
 import { PRESETS_U, PRESETS_D, matchPreset, randomUndirected, randomDirected, parseEdgeList, edgeListText, componentsAfterRemoval, MAX_N } from '../engine/graphs.js';
 
 export const MODES = [
@@ -45,7 +49,7 @@ const typing = (e) => {
   return false;
 };
 
-export default function Visualizer({ mode, setMode, graph, setGraph, start, setStart, onShare }) {
+export default function Visualizer({ mode, setMode, graph, setGraph, start, setStart, onShare, bug, setBug, lang, setLang, onOpenTab }) {
   const directed = mode === 'scc';
   const presets = directed ? PRESETS_D : PRESETS_U;
   const info = MODES.find((m) => m.id === mode);
@@ -69,7 +73,19 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
   const hv = (k) => ({ onMouseEnter: () => setHint(k), onMouseLeave: () => setHint(null), onFocus: () => setHint(k), onBlur: () => setHint(null) });
 
   const presetId = useMemo(() => matchPreset(graph, directed), [graph.n, graph.edges, directed]); // eslint-disable-line
-  const steps = useMemo(() => runTrace(mode, graph, start), [mode, graph.n, graph.edges, start]); // eslint-disable-line
+  // "Break the algorithm": the player runs the buggy trace; `cmp` also holds the correct run for comparison
+  const activeBug = bug && BUGS[bug]?.modes.includes(mode) ? bug : null;
+  useEffect(() => {
+    if (bug && !BUGS[bug]?.modes.includes(mode)) setBug(bugsFor(mode)[0]);
+  }, [mode, bug]); // eslint-disable-line
+  const cmp = useMemo(() => (activeBug && graph.n > 0 ? compareBug(mode, graph, start, activeBug) : null), [mode, graph.n, graph.edges, start, activeBug]); // eslint-disable-line
+  const steps = useMemo(() => (cmp ? cmp.steps : runTrace(mode, graph, start)), [cmp, mode, graph.n, graph.edges, start]); // eslint-disable-line
+  const breaker = useMemo(() => (activeBug ? findCounterexample(mode, activeBug) : null), [mode, activeBug]);
+  const loadBreaker = () => {
+    if (!breaker) return;
+    setGraph({ n: breaker.n, edges: breaker.edges.map((e) => [...e]), pos: breaker.pos.map((p) => ({ ...p })) });
+    setStart(0);
+  };
   useEffect(() => {
     setIdx(0);
     setPlaying(false);
@@ -116,6 +132,13 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
      The highlighted C++ line walks through every line a step executes (loop header, parent check,
      branch, ...). When several steps are skipped at once (scrubber, Home/End, jumps) it replays
      through all of them quickly, so the viewer sees that the program ran in between. */
+  // steps record marker names; the line each marker has depends on the language being shown
+  const marks = MARKS[lang][mode].marks;
+  const lineOf = (s) => marks[s.key] ?? -1;
+  const trailOf = (s) => {
+    const t = s.trailKeys.map((k) => marks[k]).filter((x) => x !== undefined);
+    return t.filter((x, i) => i === 0 || x !== t[i - 1]);
+  };
   const [shown, setShown] = useState(0);
   const [prevShown, setPrevShown] = useState(-1);
   const [replaying, setReplaying] = useState(0);
@@ -137,8 +160,8 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
 
     const delta = idx - from;
     if (!sameTrace || delta < 1) {          // new trace, restart, or stepping backwards: jump straight there
-      shownRef.current = cur.line;
-      setShown(cur.line);
+      shownRef.current = lineOf(cur);
+      setShown(lineOf(cur));
       setPrevShown(-1);
       setReplaying(0);
       return undefined;
@@ -147,11 +170,11 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
     let queue = [];
     let unit;
     if (delta === 1) {
-      queue = cur.trail;
+      queue = trailOf(cur);
       unit = playing ? Math.min(150, Math.max(40, (1300 / speed) * 0.7 / queue.length)) : 130;
       setReplaying(0);
     } else {
-      for (let k = from + 1; k <= idx; k++) queue.push(...steps[k].trail);
+      for (let k = from + 1; k <= idx; k++) queue.push(...trailOf(steps[k]));
       queue = queue.filter((x, i) => i === 0 || x !== queue[i - 1]);
       const CAP = 70;
       if (queue.length > CAP) {
@@ -169,7 +192,7 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
       }, i * unit));
     });
     return () => { timersRef.current.forEach(clearTimeout); };
-  }, [idx, steps]); // eslint-disable-line
+  }, [idx, steps, lang]); // eslint-disable-line
 
   const answered = Object.entries(answers).filter(([, v]) => v >= 0);
   const correct = answered.filter(([i, v]) => steps[i]?.quiz?.answer === v).length;
@@ -226,8 +249,10 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
   }
 
   const canvasTool = tool === 'whatif' ? 'pick' : tool;
-  const vOverride = wi ? (v) => (remV.has(v) ? { opacity: 0.3 } : { fill: PALETTE[wi.comp[v] % PALETTE.length] }) : tool === 'whatif' ? () => ({}) : undefined;
-  const eOverride = wi ? (i) => { const [a, b] = graph.edges[i]; return remE.has(i) || remV.has(a) || remV.has(b) ? { opacity: 0.18, dash: '3 7' } : null; } : undefined;
+  // at the end of a buggy run, whatever the buggy code missed is drawn in amber
+  const showMiss = !!cmp && cmp.wrong && idx === last;
+  const vOverride = wi ? (v) => (remV.has(v) ? { opacity: 0.3 } : { fill: PALETTE[wi.comp[v] % PALETTE.length] }) : tool === 'whatif' ? () => ({}) : showMiss && mode === 'ap' ? (v) => (cmp.missedIds.includes(v) ? { ring: 'var(--amber)' } : {}) : undefined;
+  const eOverride = wi ? (i) => { const [a, b] = graph.edges[i]; return remE.has(i) || remV.has(a) || remV.has(b) ? { opacity: 0.18, dash: '3 7' } : null; } : showMiss && mode === 'bridge' ? (i) => (cmp.missedIds.includes(i) ? { stroke: 'var(--amber)', width: 7 } : null) : undefined;
 
   const bct = useMemo(() => (step && mode === 'bcc' ? blockCutTree(step.blocks, graph.edges) : null), [step, mode, graph.edges]);
   // When the biconnected-components run ends, bring the finished block-cut tree into view and make it glow.
@@ -249,7 +274,7 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
   const hintKey = hint || tool;
   const [helpTitle, helpText] = HELP[hintKey === 'adde' && directed ? 'adde_d' : hintKey] || HELP.move;
 
-  const kindLabel = { ask: 'Question', verdict: 'Verdict', done: 'Done', info: 'Step' }[step?.kind || 'info'];
+  const kindLabel = { ask: 'Question', verdict: 'Verdict', done: 'Done', info: 'Step', bug: 'Bug triggered' }[step?.kind || 'info'];
 
   if (!step) {
     return (
@@ -329,6 +354,8 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
           <Legend mode={mode} />
         </div>
 
+        <BugCard mode={mode} lang={lang} bug={activeBug} setBug={setBug} cmp={cmp} idx={idx} setIdx={setIdx} onLoadBreaker={loadBreaker} breakerAvailable={!!breaker} />
+
         <div className="card player">
           <div className="pbtns">
             <button className="icon" onClick={() => setIdx(0)} aria-label="Restart" title="Restart (Home)"><IconStart /></button>
@@ -345,16 +372,29 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
               </select>
             </label>
             <label className="inl check">
-              <input type="checkbox" checked={predict} onChange={(e) => setPredict(e.target.checked)} /> Predict mode
+              <input type="checkbox" checked={predict && !activeBug} disabled={!!activeBug} onChange={(e) => setPredict(e.target.checked)} /> Predict mode{activeBug ? <span className="muted small"> (off while a bug is injected)</span> : null}
             </label>
           </div>
-          <input className="scrub" type="range" min={0} max={last} value={Math.min(idx, last)} onChange={(e) => setIdx(+e.target.value)} aria-label="Step scrubber" />
+          <div className="scrubwrap">
+            <input className="scrub" type="range" min={0} max={last} value={Math.min(idx, last)} onChange={(e) => setIdx(+e.target.value)} aria-label="Step scrubber" />
+            {cmp && cmp.hits.length > 0 && (
+              <div className="ticks" aria-hidden="true" title="Red marks: steps where the buggy line behaves differently from the correct one">
+                {cmp.hits.map((i) => <i key={i} className={i === cmp.first ? 'first' : ''} style={{ left: `${last ? (i / last) * 100 : 0}%` }} />)}
+              </div>
+            )}
+          </div>
           <div className="muted small">Step {idx + 1} / {last + 1} &nbsp;·&nbsp; keys: ← → step, Space play, Home / End</div>
         </div>
 
         <div className={`card narr ${step.kind}`}>
           <div className="narrh"><span className={`badge ${step.kind}`}>{kindLabel}</span></div>
           <p>{step.msg}</p>
+          {step.hit && (
+            <div className="hitbox">
+              <b>{cmp && idx === cmp.first ? 'First divergence from the correct algorithm: ' : 'The bug bites again: '}{step.hit.title}</b>
+              <p>{step.hit.why}</p>
+            </div>
+          )}
         </div>
 
         {predict && step.quiz && (
@@ -385,15 +425,24 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
 
       <aside className="vright">
         <div className="card">
+          <div className="cardh">DFS tree and low-link</div>
+          <DfsTree step={step} final={steps[last]} graph={graph} mode={mode} />
+        </div>
+        <div className="card">
           <div className="cardh">Live state</div>
           <StatePanel mode={mode} step={step} graph={graph} />
         </div>
         <div className="card">
-          <div className="cardh">
-            C++ — highlighted line is the one running
+          <div className="cardh">Operation counter</div>
+          <OpCounter step={step} graph={graph} directed={directed} onOpenTab={onOpenTab} />
+        </div>
+        <div className="card">
+          <div className="cardh codeh">
+            <span>Code — highlighted line is the one running</span>
+            <LangToggle lang={lang} setLang={setLang} />
             {replaying > 0 && <span className="ffwd">Replaying {replaying} steps</span>}
           </div>
-          <CodePanel mode={mode} line={shown} prev={prevShown} fast={replaying > 0} />
+          <CodePanel mode={mode} lang={lang} bug={activeBug} line={shown} prev={prevShown} fast={replaying > 0} />
         </div>
         {bct && (
           <div ref={bctRef} className={`card ${glow ? 'glow' : ''}`}>

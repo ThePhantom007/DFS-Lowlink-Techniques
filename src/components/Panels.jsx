@@ -1,11 +1,20 @@
-import { useEffect, useRef } from 'react';
-import { CODE } from '../engine/code.js';
+import { Fragment, useEffect, useRef } from 'react';
+import { getCode, LANGS } from '../engine/code.js';
 import { PALETTE } from './GraphCanvas.jsx';
 
-const KW = /^(?:int|void|for|if|else|while|return|continue|break|auto|const|bool|true|false|using|namespace|vector|pair|stack|struct)$/;
-function Syntax({ text }) {
+const KW = {
+  cpp: /^(?:int|void|for|if|else|while|return|continue|break|auto|const|bool|true|false|using|namespace|vector|pair|stack|struct)$/,
+  py: /^(?:def|for|in|if|elif|else|while|return|continue|break|global|True|False|import|not|and|or|None)$/,
+  java: /^(?:int|void|for|if|else|while|return|continue|break|static|class|public|boolean|true|false|new|import|final)$/,
+};
+const TOKENS = {
+  cpp: /(\/\/.*$)|(#include.*$)|(\b\d+\b)|(\b[A-Za-z_]\w*\b)/g,
+  java: /(\/\/.*$)|(\bimport\b.*$)|(\b\d+\b)|(\b[A-Za-z_]\w*\b)/g,
+  py: /(#.*$)|(\bimport\b.*$)|(\b\d+\b)|(\b[A-Za-z_]\w*\b)/g,
+};
+export function Syntax({ text, lang = 'cpp' }) {
   const parts = [];
-  const re = /(\/\/.*$)|(#include.*$)|(\b\d+\b)|(\b[A-Za-z_]\w*\b)/g;
+  const re = new RegExp(TOKENS[lang].source, 'g');
   let last = 0;
   let m;
   while ((m = re.exec(text))) {
@@ -13,7 +22,7 @@ function Syntax({ text }) {
     if (m[1]) parts.push(<span key={m.index} className="cm">{m[1]}</span>);
     else if (m[2]) parts.push(<span key={m.index} className="pp">{m[2]}</span>);
     else if (m[3]) parts.push(<span key={m.index} className="num">{m[3]}</span>);
-    else if (KW.test(m[4])) parts.push(<span key={m.index} className="kw">{m[4]}</span>);
+    else if (KW[lang].test(m[4])) parts.push(<span key={m.index} className="kw">{m[4]}</span>);
     else if (text[re.lastIndex] === '(') parts.push(<span key={m.index} className="fnc">{m[4]}</span>);
     else parts.push(m[4]);
     last = re.lastIndex;
@@ -22,8 +31,18 @@ function Syntax({ text }) {
   return <>{parts}</>;
 }
 
-export function CodePanel({ mode, line, prev = -1, fast = false }) {
-  const { lines } = CODE[mode];
+export function LangToggle({ lang, setLang }) {
+  return (
+    <div className="seg langseg" role="group" aria-label="Code language">
+      {LANGS.map(([id, label]) => (
+        <button key={id} className={lang === id ? 'on' : ''} aria-pressed={lang === id} onClick={() => setLang(id)}>{label}</button>
+      ))}
+    </div>
+  );
+}
+
+export function CodePanel({ mode, lang = 'cpp', bug = null, line, prev = -1, fast = false }) {
+  const { lines, bugLines } = getCode(mode, lang, bug);
   const ref = useRef(null);
   useEffect(() => {
     const box = ref.current;
@@ -36,14 +55,25 @@ export function CodePanel({ mode, line, prev = -1, fast = false }) {
     if (top < box.scrollTop + margin || bottom > box.scrollTop + box.clientHeight - margin) {
       box.scrollTo({ top: Math.max(0, top - box.clientHeight / 2), behavior: fast ? 'auto' : 'smooth' });
     }
-  }, [line, mode, fast]);
+  }, [line, mode, fast, lang]);
+  const langName = LANGS.find(([id]) => id === lang)[1];
   return (
-    <div className="code" ref={ref} tabIndex={0} aria-label="C++ source, current line highlighted">
+    <div className="code" ref={ref} tabIndex={0} aria-label={`${langName} source, current line highlighted`}>
       {lines.map((ln, i) => (
-        <div key={i} className={`cl ${i === line ? 'hl' : i === prev ? 'was' : ''}`}>
-          <span className="ln">{i + 1}</span>
-          <span className="src"><Syntax text={ln || ' '} /></span>
-        </div>
+        <Fragment key={i}>
+          <div className={`cl ${i === line ? 'hl' : i === prev ? 'was' : ''} ${i in bugLines ? 'bugl' : ''}`}>
+            <span className="ln">{i + 1}</span>
+            <span className="src"><Syntax text={ln || ' '} lang={lang} /></span>
+            {i in bugLines && <span className="bugtag">BUG</span>}
+          </div>
+          {i in bugLines && (
+            <div className="cl fixl">
+              <span className="ln">✓</span>
+              <span className="src"><Syntax text={bugLines[i] || ' '} lang={lang} /></span>
+              <span className="bugtag ok">correct</span>
+            </div>
+          )}
+        </Fragment>
       ))}
     </div>
   );
@@ -151,6 +181,35 @@ export function Legend({ mode }) {
       {mode !== 'scc' && <span><i className="vdot ring" />cut vertex</span>}
       {(mode === 'bcc' || mode === 'scc') && <span><i style={{ background: 'transparent', borderTop: '3px dotted var(--text)', height: 0 }} />{mode === 'bcc' ? 'dotted outline = one block' : 'dotted outline = one SCC'}</span>}
       <span className="muted">labels: disc / low</span>
+    </div>
+  );
+}
+
+export function OpCounter({ step, graph, directed, onOpenTab }) {
+  if (!step) return null;
+  const V = graph.n;
+  const E = graph.edges.length;
+  const perEdge = directed ? 1 : 2;
+  const entries = perEdge * E;
+  const bound = V + entries;
+  const done = step.ops.v + step.ops.e;
+  const brute = V * (V + E);
+  const Row = ({ label, val, max, color }) => (
+    <div className="oprow">
+      <span className="oplabel">{label}</span>
+      <span className="opbar"><i style={{ width: `${max ? (100 * val) / max : 0}%`, background: color }} /></span>
+      <span className="opnum">{val} / {max}</span>
+    </div>
+  );
+  return (
+    <div className="opcounter">
+      <Row label="vertices visited" val={step.ops.v} max={V} color="var(--accent)" />
+      <Row label="edge checks" val={step.ops.e} max={entries} color="var(--violet)" />
+      <Row label="total work" val={done} max={bound} color="var(--amber)" />
+      <p className="muted small">
+        Every adjacency entry is examined exactly once{directed ? '' : ', and an undirected edge sits in two lists, so each edge is checked from both ends'}: the total is always <b>V + {directed ? 'E' : '2E'} = {V} + {entries} = {bound}</b>, which is O(V + E). Deleting each vertex and recounting would cost about V·(V + E) = <b>{brute.toLocaleString()}</b>.
+        {onOpenTab && <> <button className="ghost" onClick={() => onOpenTab('perf')}>See the speed-up chart</button></>}
+      </p>
     </div>
   );
 }

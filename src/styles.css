@@ -242,12 +242,132 @@ table.dl tr.cur { background: var(--hl-bg); }
 .about ul { padding-left: 20px; }
 .about h3 { margin-top: 14px; }
 
+/* ---------- language toggle, bug lines in the listing ---------- */
+.cardh.codeh { flex-wrap: wrap; }
+.langseg { margin-left: auto; }
+.langseg button { padding: 3px 10px; font-size: 12px; text-transform: none; letter-spacing: 0; }
+.cl .src { flex: 1; }
+.cl.bugl { background: color-mix(in srgb, var(--red) 14%, transparent); border-left-color: var(--red); }
+.cl.bugl.hl { background: color-mix(in srgb, var(--red) 26%, var(--hl-bg)); }
+.cl.fixl { background: color-mix(in srgb, var(--green) 11%, transparent); border-left-color: var(--green); opacity: .92; }
+.bugtag { font-family: var(--sans); font-size: 10px; font-weight: 800; letter-spacing: .06em; padding: 0 7px; border-radius: 999px; background: var(--red); color: #fff; align-self: center; margin-left: 12px; }
+.bugtag.ok { background: var(--green); color: var(--on-accent); }
+
+/* ---------- Break the algorithm ---------- */
+.bugcard { border-left: 4px solid var(--line); }
+.bugcard.on { border-left-color: var(--red); box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 14%, transparent), var(--shadow); }
+.bughead { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.switchrow { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 15px; }
+.switchrow input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switchrow .sw { width: 40px; height: 22px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); position: relative; transition: background .2s; flex: none; }
+.switchrow .sw i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: transform .2s, background .2s; }
+.switchrow input:checked + .sw { background: color-mix(in srgb, var(--red) 40%, var(--panel2)); border-color: var(--red); }
+.switchrow input:checked + .sw i { transform: translateX(18px); background: #fff; }
+.switchrow input:focus-visible + .sw { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+.bugbody { margin-top: 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.bugbody > * { min-width: 0; }
+.bugsel { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.bugsel .inl { max-width: 100%; min-width: 0; }
+.bugsel select { min-width: 0; max-width: 100%; text-overflow: ellipsis; }
+.bugshort { font-size: 14px; }
+.diff { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 0; font-size: 12.5px; overflow-x: auto; margin: 6px 0; }
+.drow { display: flex; gap: 8px; white-space: pre; padding: 1px 12px; align-items: baseline; }
+.drow code { background: none; padding: 0; font-size: 12.5px; }
+.drow.del { background: color-mix(in srgb, var(--red) 14%, transparent); }
+.drow.add { background: color-mix(in srgb, var(--green) 14%, transparent); }
+.dsign { width: 12px; font-weight: 800; }
+.drow.del .dsign { color: var(--red); }
+.drow.add .dsign { color: var(--green); }
+.dln { width: 26px; color: var(--muted); text-align: right; }
+.verdictbox { padding: 11px 14px; border-radius: 12px; font-size: 14.5px; }
+.verdictbox.bad { background: color-mix(in srgb, var(--red) 13%, transparent); border: 1px solid color-mix(in srgb, var(--red) 55%, transparent); }
+.verdictbox.warn { background: color-mix(in srgb, var(--amber) 14%, transparent); border: 1px solid color-mix(in srgb, var(--amber) 55%, transparent); }
+.cmpgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 6px 0; }
+.bugwhy summary { cursor: pointer; font-weight: 650; }
+.bugwhy p { margin: 8px 0 0; }
+.narr.bug { border-left-color: var(--red); }
+.badge.bug { background: color-mix(in srgb, var(--red) 22%, transparent); color: var(--red); }
+.hitbox { margin-top: 10px; padding: 10px 13px; border-radius: 10px; background: color-mix(in srgb, var(--red) 12%, transparent); border: 1px solid color-mix(in srgb, var(--red) 50%, transparent); font-size: 14.5px; }
+.hitbox p { margin: 6px 0 0; }
+.scrubwrap { position: relative; }
+.scrubwrap .ticks { position: relative; height: 10px; margin: 0 8px; }
+.scrubwrap .ticks i { position: absolute; top: 1px; width: 3px; height: 8px; margin-left: -1px; background: var(--red); border-radius: 2px; }
+.scrubwrap .ticks i.first { width: 5px; height: 10px; top: 0; margin-left: -2px; outline: 2px solid color-mix(in srgb, var(--red) 40%, transparent); }
+
+/* ---------- DFS tree panel ---------- */
+.treewrap { overflow: auto; max-height: 380px; border: 1px solid var(--line); border-radius: 12px; background: var(--code-bg); }
+.treewrap svg { display: block; margin: 0 auto; }
+.treelegend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 0; align-items: center; }
+.treelegend .lg { display: inline-block; width: 22px; height: 0; border-top: 3px solid; vertical-align: middle; margin-right: 6px; }
+.treelegend .lg.tree { border-color: var(--accent); }
+.treelegend .lg.arc { border-color: var(--violet); border-top-style: dashed; }
+.treelegend .lg.hot { border-color: var(--amber); border-top-width: 4px; }
+.treelegend .lg.sh { height: 10px; border: 0; border-radius: 3px; opacity: .5; }
+.treenote { padding: 9px 12px; border-radius: 10px; font-size: 13.5px; margin: 6px 0; }
+.treenote.sealed { background: color-mix(in srgb, var(--green) 14%, transparent); border: 1px solid color-mix(in srgb, var(--green) 50%, transparent); }
+.treenote.escapes { background: color-mix(in srgb, var(--amber) 15%, transparent); border: 1px solid color-mix(in srgb, var(--amber) 55%, transparent); }
+.whybox { border-top: 1px dashed var(--line); margin-top: 8px; padding-top: 4px; }
+.whybox p { margin: 0 0 6px; font-size: 14px; }
+
+/* ---------- operation counter ---------- */
+.oprow { display: grid; grid-template-columns: 110px 1fr 74px; gap: 10px; align-items: center; font-size: 13px; margin: 5px 0; }
+.oplabel { color: var(--muted); }
+.opbar { height: 9px; background: var(--panel2); border-radius: 999px; overflow: hidden; }
+.opbar i { display: block; height: 100%; border-radius: 999px; transition: width .25s; }
+.opnum { font-family: var(--mono); font-size: 12px; text-align: right; }
+button.ghost { background: none; border: 0; color: var(--accent); padding: 0 4px; text-decoration: underline; cursor: pointer; }
+
+/* ---------- Find the bug / explain my mistake ---------- */
+.code.puzzle { max-height: none; margin: 8px 0 12px; }
+.cl.pick.can { cursor: pointer; }
+.cl.pick.can:hover { background: var(--hl-bg); border-left-color: var(--hl-bar); }
+.cl.pick.can:focus-visible { outline: 2px solid var(--accent-2); outline-offset: -2px; }
+.cl.pick.rightline { background: color-mix(in srgb, var(--red) 18%, transparent); border-left-color: var(--red); }
+.cl.pick.wrongline { background: color-mix(in srgb, var(--amber) 22%, transparent); border-left-color: var(--amber); }
+.demogrid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.demo { margin: 10px 0 14px; }
+.explain { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.exchips { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
+.exchips button { font-family: var(--mono); font-size: 12.5px; padding: 3px 10px; border-radius: 8px; }
+.exchips button.no { border-color: var(--red); }
+.exchips button.ok { border-color: var(--green); }
+.exchips button.on { background: var(--accent-grad); color: var(--on-accent); border-color: transparent; font-weight: 700; }
+.exsteps { padding-left: 22px; margin: 8px 0; }
+.exsteps li { margin: 6px 0; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; opacity: .8; }
+.exsteps li.now { opacity: 1; font-weight: 500; }
+.runchip { font-family: var(--mono); font-size: 12px; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 1px 8px; white-space: nowrap; }
+
+/* ---------- Applications ---------- */
+.appgrid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr); gap: 18px; align-items: start; }
+.statusbar { padding: 10px 14px; border-radius: 12px; margin: 10px 0; font-size: 15px; }
+.statusbar.good { background: color-mix(in srgb, var(--green) 14%, transparent); border: 1px solid color-mix(in srgb, var(--green) 50%, transparent); }
+.statusbar.bad { background: color-mix(in srgb, var(--red) 13%, transparent); border: 1px solid color-mix(in srgb, var(--red) 55%, transparent); }
+.formula2 { font-family: var(--mono); font-size: 14px; background: var(--code-bg); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 10px; padding: 10px 14px; overflow-x: auto; white-space: nowrap; }
+.clauses { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.clause { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel2); }
+.litpick { display: inline-flex; align-items: center; gap: 4px; }
+.litpick select { padding: 3px 6px; }
+.or { color: var(--muted); font-weight: 700; margin: 0 4px; }
+.verdict2.sat { border-color: color-mix(in srgb, var(--green) 55%, var(--line)); }
+.verdict2.unsat { border-color: color-mix(in srgb, var(--red) 60%, var(--line)); }
+
+/* ---------- Performance ---------- */
+.chartbox { margin: 4px 0 8px; }
+.chart { width: 100%; max-width: 940px; height: auto; display: block; }
+.chartlegend { display: flex; gap: 18px; font-size: 13px; margin-bottom: 4px; }
+.chartlegend i { display: inline-block; width: 18px; height: 4px; border-radius: 2px; margin-right: 7px; vertical-align: middle; }
+.takeaway { font-size: 15.5px; padding: 10px 14px; border-radius: 12px; background: var(--panel2); border-left: 3px solid var(--accent); }
+.perf details summary, .apps details summary { cursor: pointer; font-weight: 650; margin: 6px 0; }
+
 @media (max-width: 1100px) {
   .viz, .learn { grid-template-columns: minmax(0, 1fr); }
   .vright, .lnav { position: static; max-height: none; }
   .grid2 { grid-template-columns: minmax(0, 1fr); }
+  .appgrid, .demogrid, .cmpgrid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 700px) {
+  .tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; order: 3; flex: 1 1 100%; }
+  .tabs button { white-space: nowrap; padding: 7px 12px; }
   .app { padding: 14px 12px 36px; }
   .top-in { padding: 10px 12px; }
   .lbody { padding: 18px; }

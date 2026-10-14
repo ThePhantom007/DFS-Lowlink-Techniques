@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import GraphCanvas from './GraphCanvas.jsx';
 import { QUIZ } from '../data/practice.js';
+import FindBug from './FindBug.jsx';
 import { runTrace } from '../engine/traces.js';
+import { explainLow } from '../engine/explain.js';
 import { randomUndirected } from '../engine/graphs.js';
 
 const shuffle = (arr) => {
@@ -17,9 +19,10 @@ const SUBS = [
   ['quiz', 'Quiz'],
   ['trace', 'Trace it'],
   ['spot', 'Spot it'],
+  ['bug', 'Find the bug'],
 ];
 
-export default function Practice() {
+export default function Practice({ lang, setLang, onOpenGraph }) {
   const [sub, setSub] = useState('quiz');
   return (
     <div className="practice">
@@ -31,6 +34,7 @@ export default function Practice() {
       {sub === 'quiz' && <Quiz />}
       {sub === 'trace' && <TraceIt />}
       {sub === 'spot' && <SpotIt />}
+      {sub === 'bug' && <FindBug lang={lang} setLang={setLang} onOpenGraph={onOpenGraph} />}
     </div>
   );
 }
@@ -175,10 +179,23 @@ function TraceIt() {
   const [t, setT] = useState(makeTrace);
   const [vals, setVals] = useState({});
   const [checked, setChecked] = useState(false);
+  const [exV, setExV] = useState(null); // vertex whose low is being explained
+  const [shownSteps, setShownSteps] = useState(1);
 
-  const fresh = () => { setT(makeTrace()); setVals({}); setChecked(false); };
+  const fresh = () => { setT(makeTrace()); setVals({}); setChecked(false); setExV(null); setShownSteps(1); };
   const right = (v) => String(t.final.low[v]) === String(vals[v] ?? '').trim();
   const nRight = t.g.pos.filter((_, v) => right(v)).length;
+  const wrong = t.g.pos.map((_, v) => v).filter((v) => !right(v));
+
+  // explanation: the first wrong vertex by default
+  const cur = checked ? (exV !== null && exV < t.g.n ? exV : wrong[0] ?? 0) : null;
+  const ex = useMemo(() => (cur === null ? null : explainLow(t.g, t.final, cur, vals[cur] ?? '')), [cur, t, vals]);
+  const shown = ex ? ex.steps.slice(0, shownSteps) : [];
+  const hot = shown.length ? shown[shown.length - 1] : null;
+  const pickV = (v) => { setExV(v); setShownSteps(1); };
+
+  const vOverride = hot ? (v) => (v === cur ? { ring: 'var(--blue)' } : hot.hlV.includes(v) ? { ring: 'var(--amber)' } : {}) : undefined;
+  const eOverride = hot ? (i) => (hot.hlE.includes(i) ? { stroke: 'var(--amber)', width: 6.5, dash: null } : null) : undefined;
 
   return (
     <div className="card">
@@ -186,7 +203,7 @@ function TraceIt() {
         A DFS from vertex 0 has already run (neighbours are visited in edge-creation order). Each vertex shows its <b>disc</b>. Teal solid edges are tree edges, violet dashed edges are back edges.
         Work out <b>low[v]</b> for every vertex, starting from the leaves. Remember: low[u] = min(disc[u], disc[w] over back edges, low[child]).
       </p>
-      <GraphCanvas graph={t.g} step={t.view} mode="ap" labelMode="disc" />
+      <GraphCanvas graph={t.g} step={t.view} mode="ap" labelMode="disc" vOverride={vOverride} eOverride={eOverride} />
       <div className="tracegrid">
         {t.g.pos.map((_, v) => (
           <label key={v} className={checked ? (right(v) ? 'good' : 'bad') : ''}>
@@ -197,11 +214,41 @@ function TraceIt() {
         ))}
       </div>
       <div className="pbtns">
-        <button className="primary" onClick={() => setChecked(true)} disabled={checked}>Check</button>
-        <button onClick={() => { setVals(Object.fromEntries(t.final.low.map((l, v) => [v, String(l)]))); setChecked(true); }}>Reveal</button>
+        <button className="primary" onClick={() => { setChecked(true); setExV(null); setShownSteps(1); }} disabled={checked}>Check</button>
+        <button onClick={() => { setVals(Object.fromEntries(t.final.low.map((l, v) => [v, String(l)]))); setChecked(true); setExV(null); setShownSteps(1); }}>Reveal</button>
         <button onClick={fresh}>New graph</button>
         {checked && <span className="score">{nRight} / {t.g.n} correct</span>}
       </div>
+
+      {checked && ex && (
+        <div className="explain">
+          <div className="stitle">Explain my mistake: how is low derived?</div>
+          <div className="exchips" role="group" aria-label="Choose a vertex to explain">
+            {t.g.pos.map((_, v) => (
+              <button key={v} className={`${v === cur ? 'on' : ''} ${right(v) ? 'ok' : 'no'}`} onClick={() => pickV(v)} aria-pressed={v === cur}>low[{v}]{right(v) ? ' ✓' : ' ✗'}</button>
+            ))}
+          </div>
+          <div className={`qwhy ${right(cur) ? 'ok' : 'no'}`}>
+            {right(cur)
+              ? <>Your answer for low[{cur}] ({vals[cur]}) is right. Here is how it comes about.</>
+              : <><b>You wrote {vals[cur] === undefined || vals[cur] === '' ? 'nothing' : vals[cur]} for low[{cur}]; the right value is {ex.answer}.</b> {ex.diagnosis}</>}
+          </div>
+          <ol className="exsteps">
+            {shown.map((st, k) => (
+              <li key={k} className={k === shown.length - 1 ? 'now' : ''}>
+                <span>{st.text}</span>
+                <span className="runchip">low so far = {st.run}</span>
+              </li>
+            ))}
+          </ol>
+          <div className="pbtns">
+            <button className="primary" onClick={() => setShownSteps((k) => Math.min(ex.steps.length, k + 1))} disabled={shownSteps >= ex.steps.length}>Next step</button>
+            <button onClick={() => setShownSteps(ex.steps.length)} disabled={shownSteps >= ex.steps.length}>Show all</button>
+            <button onClick={() => setShownSteps(1)} disabled={shownSteps === 1}>Start again</button>
+            <span className="muted small">Amber on the graph = the edges and vertices used in the current step; the blue ring is low[{cur}]'s vertex.</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

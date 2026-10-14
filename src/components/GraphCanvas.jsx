@@ -60,7 +60,7 @@ function edgeStyle(i, step, mode) {
 }
 
 // Rounded convex outline around a set of vertices: hull of circles of radius `pad` around each one.
-function hullPath(pts, pad) {
+export function hullPath(pts, pad) {
   const all = [];
   pts.forEach((p) => {
     for (let k = 0; k < 24; k++) {
@@ -99,6 +99,7 @@ export default function GraphCanvas({
   onClickE,
   pending: pendingProp,
   onPending,
+  vLabel, // optional (v) => text shown inside the vertex instead of its number
 }) {
   const svgRef = useRef(null);
   const dragRef = useRef(null);
@@ -270,8 +271,8 @@ export default function GraphCanvas({
             {o.ring && <circle r={R + 7} fill="none" stroke={o.ring} strokeWidth="4" />}
             {isCur && <circle className="pulse" r={R + 5} fill="none" stroke="var(--accent-2)" strokeWidth="2.5" />}
             <circle className="node-c" r={R} fill={fill} stroke={isCur ? 'var(--text)' : 'var(--node-stroke)'} strokeWidth={isCur ? 3.5 : 1.5} style={{ transition: 'fill 0.25s' }} />
-            <text textAnchor="middle" dy="0.35em" fontSize="15" fontWeight="700" fill={labelFill} style={{ pointerEvents: 'none', userSelect: 'none' }}>
-              {v}
+            <text textAnchor="middle" dy="0.35em" fontSize={vLabel ? 12.5 : 15} fontWeight="700" fill={labelFill} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+              {vLabel ? vLabel(v) : v}
             </text>
             {step && labelMode !== 'none' && step.disc[v] >= 0 && (
               <g style={{ pointerEvents: 'none' }}>
