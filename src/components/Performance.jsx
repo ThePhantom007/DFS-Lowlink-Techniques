@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { runBench } from '../engine/bench.js';
+import SccRace from './SccRace.jsx';
 
 const SIZES = [25, 50, 100, 200, 400, 800, 1600];
 const SIZES_BIG = [...SIZES, 3200];
@@ -83,7 +84,7 @@ function Chart({ rows, metric, sizes }) {
   );
 }
 
-export default function Performance() {
+function ApBench() {
   const [rows, setRows] = useState([]);
   const [running, setRunning] = useState(false);
   const [big, setBig] = useState(false);
@@ -151,6 +152,22 @@ export default function Performance() {
           </details>
         </div>
       )}
+    </div>
+  );
+}
+
+export default function Performance() {
+  const [view, setView] = useState(() => {
+    try { return localStorage.getItem('dll-perf') === 'ap' ? 'ap' : 'race'; } catch { return 'race'; }
+  });
+  const pick = (v) => { setView(v); try { localStorage.setItem('dll-perf', v); } catch { /* ignore */ } };
+  return (
+    <div className="perfwrap">
+      <div className="seg" role="group" aria-label="Which comparison">
+        <button className={view === 'race' ? 'on' : ''} onClick={() => pick('race')}>SCC race</button>
+        <button className={view === 'ap' ? 'on' : ''} onClick={() => pick('ap')}>Cut vertices: one pass vs brute force</button>
+      </div>
+      {view === 'race' ? <SccRace /> : <ApBench />}
     </div>
   );
 }

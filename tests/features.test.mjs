@@ -6,6 +6,7 @@ import { compareBug, findCounterexample } from '../src/engine/bugs.js';
 import { explainLow } from '../src/engine/explain.js';
 import { analyzeUndirected, bruteArticulationOps, tarjanSCC, solve2SAT, bruteSAT, lit } from '../src/engine/lean.js';
 import { benchOnce } from '../src/engine/bench.js';
+import { raceGraph, drain, naiveSCC, kosarajuSCC, tarjanRace } from '../src/engine/sccRace.js';
 import { bruteArticulation, bruteBridges, randomUndirected, randomDirected, PRESETS_U, PRESETS_D } from '../src/engine/graphs.js';
 
 let failures = 0;
@@ -161,5 +162,26 @@ for (let i = 0; i < 600; i++) {
 }
 check(sat > 50 && unsat > 50, `2-SAT test mix ${sat}/${unsat}`);
 
-console.log(failures === 0 ? `All feature tests passed (${exposed} wrong-answer cases checked for markers, 2-SAT ${sat} sat / ${unsat} unsat).` : `${failures} failure(s).`);
+/* ---------- SCC race: naive, Kosaraju and Tarjan agree, and their costs follow the formulas ---------- */
+const partition = (comp) => { const m = new Map(); comp.forEach((c, v) => { if (!m.has(c)) m.set(c, []); m.get(c).push(v); }); return JSON.stringify([...m.values()].map((a) => a.join(',')).sort()); };
+let raced = 0;
+for (let k = 0; k < 120; k++) {
+  const n = 2 + (k % 40);
+  const g = k % 3 === 0 ? randomDirected(Math.min(n, 12), Math.min(n, 12) + (k % 7)) : raceGraph(n, k);
+  const ref = tarjanSCC(g.n, g.edges);
+  const a = drain(naiveSCC, g.n, g.edges);
+  const b = drain(kosarajuSCC, g.n, g.edges);
+  const c = drain(tarjanRace, g.n, g.edges);
+  check(partition(a.comp) === partition(ref.comp) && partition(b.comp) === partition(ref.comp) && partition(c.comp) === partition(ref.comp), `race SCC partitions differ n=${g.n} k=${k}`);
+  check(a.count === ref.count && b.count === ref.count && c.count === ref.count, `race SCC counts differ k=${k}`);
+  check(c.ops === g.n + g.edges.length, `Tarjan ops ${c.ops} != V+E for k=${k}`);
+  check(b.ops === 2 * g.n + 3 * g.edges.length, `Kosaraju ops ${b.ops} != 2V+3E for k=${k}`);
+  check(a.ops >= c.ops, `naive cheaper than Tarjan k=${k}`);
+  raced++;
+}
+const big = raceGraph(200, 3);
+const ratio = drain(naiveSCC, big.n, big.edges).ops / drain(tarjanRace, big.n, big.edges).ops;
+check(ratio > 50, `naive should be far costlier than Tarjan at n=200 (ratio ${ratio.toFixed(1)})`);
+
+console.log(failures === 0 ? `All feature tests passed (${exposed} wrong-answer cases checked for markers, 2-SAT ${sat} sat / ${unsat} unsat, ${raced} graphs raced through naive/Kosaraju/Tarjan).` : `${failures} failure(s).`);
 process.exit(failures ? 1 : 0);

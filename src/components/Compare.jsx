@@ -4,6 +4,12 @@ import BlockCutTree from './BlockCutTree.jsx';
 import { runTrace, blockCutTree } from '../engine/traces.js';
 import { PRESETS_U, PRESETS_D, matchPreset, randomUndirected, randomDirected } from '../engine/graphs.js';
 
+const SCC_ALGOS = [
+  ['Naive', 'Search from every vertex; u and v share a component when each reaches the other.', 'none (a V × V reachability table)', 'O(V · (V + E))', 'any order', 'V searches plus V² pair checks'],
+  ['Kosaraju', 'DFS for finish order, reverse all edges, DFS again from the latest finisher.', 'finish-order list and the reversed graph', 'O(V + E)', 'topological order of the condensation', 'two DFS passes plus building the reverse: 2V + 3E'],
+  ['Tarjan', 'One DFS; low[u] == disc[u] marks a component root, pop the stack down to u.', 'vertex stack + onStack[]', 'O(V + E)', 'reverse topological order', 'one pass: V + E'],
+];
+
 const TABLE = [
   ['Articulation points', 'Which vertices disconnect the graph?', 'non-root: low[v] ≥ disc[u]; root: ≥ 2 children', 'none', 'set of vertices'],
   ['Bridges', 'Which edges disconnect the graph?', 'low[v] > disc[u]', 'none', 'set of edges'],
@@ -22,7 +28,7 @@ function Pane({ title, children, caption }) {
   );
 }
 
-export default function Compare({ mode, graph, setMode, setGraph }) {
+export default function Compare({ mode, graph, setMode, setGraph, onOpenTab }) {
   const directed = mode === 'scc';
   const presets = directed ? PRESETS_D : PRESETS_U;
   const presetId = matchPreset(graph, directed);
@@ -95,6 +101,24 @@ export default function Compare({ mode, graph, setMode, setGraph }) {
           </Pane>
         </div>
       )}
+
+      <div className="card">
+        <div className="cardh">Three ways to find strongly connected components</div>
+        <div className="tablewrap">
+          <table className="cmp">
+            <thead>
+              <tr><th>Method</th><th>Idea</th><th>Extra structure</th><th>Time</th><th>Components come out in</th><th>Work counted</th></tr>
+            </thead>
+            <tbody>
+              {SCC_ALGOS.map((r) => (
+                <tr key={r[0]}>{r.map((c, i) => <td key={i}>{i === 0 ? <b>{c}</b> : i === 3 ? <code>{c}</code> : c}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="muted small">All three return the same partition. They differ in how much work it takes to get there.</p>
+        {onOpenTab && <div className="pbtns"><button className="primary" onClick={() => onOpenTab('perf')}>Watch them race</button></div>}
+      </div>
 
       <div className="card">
         <div className="cardh">Same skeleton, different question</div>

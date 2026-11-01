@@ -375,3 +375,28 @@ button.ghost { background: none; border: 0; color: var(--accent); padding: 0 4px
   .top-in { gap: 10px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* ---- SCC race ---- */
+.perfwrap { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+.perfwrap > * { min-width: 0; }
+.perfwrap > .seg { justify-self: start; display: flex; flex-wrap: wrap; max-width: 100%; }
+.perfwrap > .seg button { flex: 1 1 auto; }
+.race { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+.raceclock { margin-left: auto; font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); }
+.lanes { display: grid; gap: 18px; margin: 8px 0; }
+.lane { border: 1px solid var(--line); border-left: 4px solid var(--lc); border-radius: 12px; padding: 12px 14px; background: var(--panel2); }
+.lanehead { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 8px; }
+.ldot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; background: var(--lc); margin-right: 8px; }
+.lanehead code { font-size: 12.5px; color: var(--muted); }
+.lstat { margin-left: auto; font-size: 13px; color: var(--muted); }
+.lstat.run { color: var(--amber); }
+.lstat.ok { color: var(--green); font-weight: 700; }
+.track { position: relative; height: 22px; border-radius: 7px; background: var(--panel); border: 1px solid var(--line); overflow: hidden; }
+.track .fill { height: 100%; background: var(--lc); min-width: 0; border-radius: 6px 0 0 6px; }
+.track .endmark { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -3px; background: var(--text); opacity: .55; }
+.own { height: 5px; border-radius: 3px; background: var(--panel); margin-top: 6px; overflow: hidden; }
+.own div { height: 100%; background: var(--lc); opacity: .55; }
+.lanefoot { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 8px; font-size: 13.5px; }
+.lanefoot b { font-variant-numeric: tabular-nums; font-family: var(--mono); }
+.laneblurb { margin: 4px 0 0; }
+@media (max-width: 560px) { .lstat { margin-left: 0; } .raceclock { margin-left: 0; } }

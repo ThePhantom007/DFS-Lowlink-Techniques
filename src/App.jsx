@@ -123,7 +123,7 @@ export default function App() {
         {/* Learn and Practice stay mounted while hidden, so progress survives switching tabs but not a refresh */}
         <div hidden={tab !== 'learn'}><Learn onTry={tryIt} /></div>
         <div hidden={tab !== 'practice'}><Practice lang={lang} setLang={setLang} onOpenGraph={openGraph} /></div>
-        {tab === 'compare' && <Compare mode={mode} setMode={setMode} graph={graph} setGraph={setGraph} />}
+        {tab === 'compare' && <Compare mode={mode} setMode={setMode} graph={graph} setGraph={setGraph} onOpenTab={openTab} />}
         {tab === 'apps' && <Applications graphU={graphs.u} onOpenGraph={openGraph} />}
         {tab === 'perf' && <Performance />}
         {tab === 'about' && <About />}
@@ -157,7 +157,7 @@ function About() {
             <li><b>Practice</b>: a quiz, Trace-it (compute low by hand) and Spot-it (find cut vertices and bridges).</li>
             <li><b>Break the algorithm</b>: inject a classic bug (skip the root rule, &gt; instead of ≥, push a back edge twice, drop <code>onStack</code>, ...), watch it give a wrong answer and see the exact step where it diverges.</li>
             <li><b>DFS tree panel</b>: see why each <code>low</code> has its value, and the whole subtree being tested.</li>
-            <li><b>Applications</b>: a router-failure simulator and 2-SAT solved with SCCs. <b>Performance</b>: operation counts and a benchmark against brute force.</li>
+            <li><b>Applications</b>: a router-failure simulator and 2-SAT solved with SCCs. <b>Performance</b>: operation counts, a live race between naive, Kosaraju and Tarjan SCC, and a benchmark against brute force.</li>
             <li><b>Code</b> in C++, Python or Java.</li>
             <li><b>Share</b> any graph as a link.</li>
           </ul>
