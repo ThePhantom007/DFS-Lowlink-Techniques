@@ -400,3 +400,13 @@ button.ghost { background: none; border: 0; color: var(--accent); padding: 0 4px
 .lanefoot b { font-variant-numeric: tabular-nums; font-family: var(--mono); }
 .laneblurb { margin: 4px 0 0; }
 @media (max-width: 560px) { .lstat { margin-left: 0; } .raceclock { margin-left: 0; } }
+
+/* ---- complexity banner ---- */
+.cxbar { margin-bottom: 14px; display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px 12px; padding: 10px 12px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
+.cxchip { display: flex; align-items: baseline; gap: 10px; padding: 8px 16px; border-radius: 11px; border: 2px solid var(--cx); background: color-mix(in srgb, var(--cx) 16%, var(--panel)); }
+.cxchip.time { --cx: var(--accent); }
+.cxchip.space { --cx: var(--violet); }
+.cxchip span { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.cxchip b { font-family: var(--mono); font-size: 21px; font-weight: 800; color: var(--text); white-space: nowrap; }
+.cxwhy { flex: 1 1 260px; margin: 0; align-self: center; font-size: 13.5px; color: var(--muted); }
+.cxwhy b { color: var(--text); font-family: var(--mono); }

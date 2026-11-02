@@ -49,6 +49,14 @@ const typing = (e) => {
   return false;
 };
 
+// Time and space for each lens, with the reason in one line.
+const COMPLEXITY = {
+  ap: { time: 'O(V + E)', space: 'O(V)', why: 'Each vertex is visited once and each adjacency entry scanned once. Extra memory: disc, low, parent and the recursion stack.' },
+  bridge: { time: 'O(V + E)', space: 'O(V)', why: 'Same single DFS as cut vertices. Extra memory: disc, low, parent and the recursion stack.' },
+  bcc: { time: 'O(V + E)', space: 'O(V + E)', why: 'Same DFS, plus an edge stack: every edge is pushed once and popped once, and in the worst case all E edges wait on the stack together.' },
+  scc: { time: 'O(V + E)', space: 'O(V)', why: 'One DFS. Extra memory: disc, low, onStack and the vertex stack, each of size V.' },
+};
+
 export default function Visualizer({ mode, setMode, graph, setGraph, start, setStart, onShare, bug, setBug, lang, setLang, onOpenTab }) {
   const directed = mode === 'scc';
   const presets = directed ? PRESETS_D : PRESETS_U;
@@ -302,6 +310,15 @@ export default function Visualizer({ mode, setMode, graph, setGraph, start, setS
           {MODES.map((m) => (
             <button key={m.id} role="tab" aria-selected={mode === m.id} className={mode === m.id ? 'on' : ''} onClick={() => setMode(m.id)}>{m.label}</button>
           ))}
+        </div>
+
+        <div className="cxbar" role="group" aria-label="Complexity of this algorithm">
+          <div className="cxchip time"><span>Time</span><b>{COMPLEXITY[mode].time}</b></div>
+          <div className="cxchip space"><span>Space</span><b>{COMPLEXITY[mode].space}</b></div>
+          <p className="cxwhy">
+            {COMPLEXITY[mode].why}{' '}
+            {graph.n > 0 && <>On this graph: <b>V + {directed ? 'E' : '2E'} = {graph.n + (directed ? 1 : 2) * graph.edges.length}</b> steps.</>}
+          </p>
         </div>
 
         <div className="card">
